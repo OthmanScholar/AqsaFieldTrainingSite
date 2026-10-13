@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة التدريب الميداني | كلية مجتمع الأقصى</title>
+<style>
+:root{--green:#06483d;--dark:#07382f;--gold:#d4ad50;--cream:#f8f6ef}
+*{box-sizing:border-box}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--cream);color:#153d35}
+nav{background:var(--dark);color:white;padding:17px 5%;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+nav a{color:white;text-decoration:none;margin:5px 10px}
+.hero{text-align:center;padding:55px 18px 65px;background:linear-gradient(135deg,#e5eee6,#fff8e8)}
+.logo{font-size:45px}
+.pill{display:inline-block;background:var(--green);color:white;border-radius:12px;padding:12px 25px;font-size:23px;font-weight:bold}
+h1{font-size:clamp(27px,4vw,43px);margin:20px 0 10px}
+.tagline{display:inline-block;background:#e4c16b;color:#222;padding:12px 18px;border-radius:10px;font-weight:bold}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;max-width:1250px;margin:-25px auto 35px;padding:0 20px}
+.card{background:white;border-radius:18px;padding:25px 20px;text-align:center;box-shadow:0 8px 25px #163b3015;border:1px solid #eee}
+.symbol{font-size:36px;color:var(--gold)}
+.card h2{font-size:21px}
+.card p{line-height:1.8;color:#52645e}
+button,.button{display:inline-block;border:0;border-radius:10px;background:var(--green);color:white;padding:13px 18px;font-size:16px;text-decoration:none;cursor:pointer;font-weight:bold}
+.gold{background:#b9953f}
+section{max-width:1000px;margin:30px auto;padding:25px;background:white;border-radius:16px}
+input,select{width:100%;padding:12px;margin:8px 0 15px;border:1px solid #ccd6d0;border-radius:8px;font:inherit}
+footer{text-align:center;padding:25px;background:#eee8d8;line-height:2}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav>
+<strong>كلية مجتمع الأقصى</strong>
+<div><a href="#home">الرئيسية</a><a href="#entities">جهات التدريب</a><a href="#forms">النماذج</a><a href="#login">تسجيل الدخول</a></div>
+</nav>
+
+<header class="hero" id="home">
+<div class="logo">🎓</div>
+<div class="pill">كلية مجتمع الأقصى</div>
+<h1>نظام إدارة التدريب الميداني</h1>
+<div class="tagline">من التعلم إلى الواقع ... نحو مستقبل مهني متميز</div>
+</header>
+
+<main class="cards">
+<article class="card">
+<div class="symbol">👤＋</div><h2>تسجيل الطالب</h2>
+<p>للطلبة المؤهلين للتدريب الميداني</p>
+<a class="button" href="#register">بدء التسجيل ←</a>
+</article>
+<article class="card">
+<div class="symbol">📄</div><h2>كتب ونماذج التدريب</h2>
+<p>الملفات والنماذج التي تضيفها الكلية وتعتمد نشرها</p>
+<a class="button gold" href="#forms">عرض النماذج ←</a>
+</article>
+<article class="card">
+<div class="symbol">🏛️</div><h2>جهات التدريب</h2>
+<p>المؤسسات والمدارس والمراكز المستضيفة</p>
+<a class="button" href="#entities">الاطلاع على الجهات ←</a>
+</article>
+<article class="card">
+<div class="symbol">🔎</div><h2>متابعة الطلب</h2>
+<p>متابعة حالة التسجيل والاعتماد</p>
+<a class="button gold" href="#track">متابعة الآن ←</a>
+</article>
+</main>
+
+<section id="register">
+<h2>التسجيل المبدئي للتدريب</h2>
+<p>هذه واجهة أولية؛ لن يُرسل النموذج أي بيانات قبل ربطه بقاعدة البيانات والتحقق من هوية الطالب.</p>
+<label>الاسم الرباعي</label><input placeholder="أدخل الاسم الرباعي">
+<label>الرقم الجامعي</label><input placeholder="أدخل الرقم الجامعي">
+<label>التخصص</label>
+<select id="specialty">
+<option value="">اختر التخصص</option>
+<option>العلاقات العامة والإعلام</option><option>الوسائط المتعددة</option>
+<option>إدارة الأعمال</option><option>تكنولوجيا المعلومات والاتصالات</option>
+<option>برمجة تطبيقات الهواتف الذكية</option><option>تربية الطفل</option>
+<option>أمن المعلومات</option><option>السكرتاريا الدولية</option>
+<option>العلاج الوظيفي</option><option>العلوم المالية والمصرفية</option>
+<option>علوم التربية البدنية</option><option>التصميم الجرافيكي</option>
+</select>
+<label>جهة التدريب</label>
+<select id="entity" onchange="showEntityLink()">
+<option value="">اختر جهة التدريب</option>
+<option value="redcrescent">جمعية الهلال الأحمر الفلسطيني – كلية تنمية القدرات الجامعية</option>
+<option value="other">مؤسسة أخرى</option>
+</select>
+<div id="redLink" class="hidden">
+<p>رابط التسجيل الخارجي الخاص بالهلال الأحمر:</p>
+<a class="button gold" href="https://train.adc.edu.ps/welcome" target="_blank" rel="noopener">فتح بوابة تدريب الهلال الأحمر ↗</a>
+<p>يجب إكمال التسجيل في بوابة الهلال الأحمر وفق إجراءاتهم، بالإضافة إلى إجراءات اعتماد الكلية.</p>
+</div>
+<div id="otherEntity" class="hidden">
+<label>اسم المؤسسة</label><input placeholder="اكتب اسم المؤسسة">
+<label>المحافظة أو المنطقة</label><input placeholder="اكتب المنطقة أو أقرب معلم">
+</div>
+</section>
+
+<section id="entities">
+<h2>جهات التدريب</h2>
+<p>سيتم عرض المؤسسات المعتمدة في هذه الصفحة بعد ربط الموقع بقاعدة بيانات الكلية.</p>
+</section>
+
+<section id="forms">
+<h2>كتب ونماذج التدريب</h2>
+<p>ستظهر هنا الملفات التي تضيفها الإدارة وتعتمد نشرها. لا توجد نماذج منشورة في النسخة الأولية.</p>
+</section>
+
+<section id="track">
+<h2>متابعة الطلب</h2>
+<p>ستتاح متابعة الطلب بعد بناء نظام التسجيل وتسجيل دخول الطالب.</p>
+</section>
+
+<section id="login">
+<h2>تسجيل الدخول</h2>
+<p>سيُفعّل تسجيل الدخول بعد إعداد حسابات الطلاب والمسؤولين والصلاحيات.</p>
+</section>
+
+<footer>
+<strong>كلية مجتمع الأقصى – نظام إدارة التدريب الميداني</strong><br>
+رئيس القسم: د. علاء الدين صلاح عيد<br>
+مساعد رئيس القسم: د. عثمان محمد العثماني
+</footer>
+
+<script>
+function showEntityLink(){
+const value=document.getElementById('entity').value;
+document.getElementById('redLink').classList.toggle('hidden',value!=='redcrescent');
+document.getElementById('otherEntity').classList.toggle('hidden',value!=='other');
+}
+</script>
+</body>
+</html>
