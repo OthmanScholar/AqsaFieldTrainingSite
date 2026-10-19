@@ -39,8 +39,9 @@ function regionMatches(area: string, region: string): boolean {
   return a === r || r.includes(a);
 }
 function categoryMatches(gender: 'male' | 'female', category: string): boolean {
-  const c = normalizeArabic(category).replace(/ال/g, '');
-  if (c.includes('جميع') || c.includes('كل') || c.includes('طلاب وطالبات') || c.includes('طالبات وطلاب')) return true;
+  // Preserve the letters in "طالبات"; stripping "ال" here corrupts that word and rejects female matches.
+  const c = normalizeArabic(category).replace(/[\s\-_]/g, '');
+  if (c.includes('جميع') || c.includes('كل') || c.includes('طلابوطالبات') || c.includes('طالباتوطالبات') || c.includes('طالباتوطالب')) return true;
   return gender === 'male' ? (c.includes('طلاب') || c.includes('ذكور')) : (c.includes('طالبات') || c.includes('اناث'));
 }
 function specialtyMatches(studentSpecialty: string, supervisorGroup: string): boolean {
