@@ -33,9 +33,9 @@ function genderFromNumber(n: string): 'male' | 'female' | null {
 function regionMatches(area: string, region: string): boolean {
   const a = normalizeArabic(area).replace(/ال/g, ''), r = normalizeArabic(region).replace(/ال/g, '');
   if (['كل المناطق','كل غزة','الفرعين','الفرعان','جميع المناطق','الكل'].some(x => r.includes(normalizeArabic(x).replace(/ال/g, '')))) return true;
-  if (a.includes('غزه') || a.includes('شمال')) return r.includes('غزه') || r.includes('شمال');
-  if (a.includes('وسطي')) return r.includes('وسطي');
-  if (a.includes('خانيونس') || a.includes('رفح')) return r.includes('جنوب') || r.includes('خانيونس') || r.includes('رفح');
+  if (a.includes('غزه') || a.includes('شمال')) return r.includes('غزه') || r.includes('شمال') || r.includes('شفاء');
+  if (a.includes('وسطي')) return r.includes('وسطي') || r.includes('مغازي') || r.includes('دير بلح') || r.includes('نصيرات');
+  if (a.includes('جنوب') || a.includes('خانيونس') || a.includes('رفح')) return r.includes('جنوب') || r.includes('خانيونس') || r.includes('رفح');
   return a === r || r.includes(a);
 }
 function categoryMatches(gender: 'male' | 'female', category: string): boolean {
