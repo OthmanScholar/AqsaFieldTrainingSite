@@ -90,9 +90,12 @@ Deno.serve(async (req) => {
       if (roster.specialty_id != null && Number(roster.specialty_id) !== specialtyId) return respond({ error: 'التخصص لا يطابق تخصص الطالب في كشف القسم.' }, 403);
       const { data: specialty, error: spError } = await admin.from('specialties').select('id,name').eq('id', specialtyId).eq('is_active', true).maybeSingle();
       if (spError || !specialty) return respond({ error: 'التخصص المختار غير متاح. حدّث الصفحة واختر تخصصًا معتمدًا.' }, 400);
-      const { data: supervisor, error: supError } = await admin.from('public_supervisors').select('id,name,region,category,specialty,phone,is_active').eq('id', supervisorId).maybeSingle();
+      const { data: supervisor, error: supError } = await admin.from('public_supervisors').select('id,name,region,category,specialty,phone,is_active,user_id').eq('id', supervisorId).maybeSingle();
       if (supError || !supervisor || supervisor.is_active === false) return respond({ error: 'المشرف المختار غير موجود أو غير نشط.' }, 400);
       if (!regionMatches(area, supervisor.region) || !categoryMatches(gender, supervisor.category) || !specialtyMatches(specialty.name, supervisor.specialty)) return respond({ error: 'المشرف لا يطابق المنطقة أو التخصص أو فئة الطالب.' }, 400);
+      if (!supervisor.user_id) return respond({ error: 'حساب دخول هذا المشرف غير مربوط بالدليل بعد. على القسم ربط حساب المشرف أولًا حتى يظهر الطالب في كشفه.' }, 409);
+      const { data: supervisorRole, error: supervisorRoleError } = await admin.from('user_roles').select('role,is_active').eq('user_id', supervisor.user_id).maybeSingle();
+      if (supervisorRoleError || !supervisorRole || supervisorRole.role !== 'supervisor' || supervisorRole.is_active === false) return respond({ error: 'حساب المشرف غير نشط أو لم تُضبط له صلاحية مشرف. راجع القسم.' }, 409);
       const { data: existing, error: exErr } = await admin.from('student_profiles').select('user_id').eq('university_number', n).maybeSingle();
       if (exErr) return respond({ error: 'تعذر التحقق من الرقم الجامعي.' }, 500);
       if (existing) return respond({ error: 'يوجد حساب مسجل بهذا الرقم الجامعي. استخدم الدخول أو راجع القسم.' }, 409);
@@ -103,6 +106,8 @@ Deno.serve(async (req) => {
       if (profileError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر حفظ ملف الطالب؛ أُلغي الحساب الجديد. راجع مخطط قاعدة البيانات.' }, 500); }
       const { error: roleError } = await admin.from('user_roles').upsert({ user_id: created.user.id, role: 'student', is_active: true }, { onConflict: 'user_id' });
       if (roleError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر إنشاء صلاحية الطالب؛ أُلغي الحساب الجديد.' }, 500); }
+      const { error: assignmentError } = await admin.from('supervisor_assignments').upsert({ supervisor_user_id: supervisor.user_id, student_user_id: created.user.id, specialty_id: specialtyId, training_entity_id: null }, { onConflict: 'supervisor_user_id,student_user_id' });
+      if (assignmentError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر تسجيل إسناد المشرف. تأكد من إعداد جدول التكليفات وربط حساب المشرف، ثم أعد المحاولة؛ أُلغي الحساب الجديد.' }, 500); }
       const { data: login, error: loginError } = await client.auth.signInWithPassword({ email, password });
       if (loginError || !login.session) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر إكمال الدخول بعد إنشاء الحساب؛ أُلغي الحساب الجديد.' }, 500); }
       return respond({ ok: true, session: login.session, user: login.user });
