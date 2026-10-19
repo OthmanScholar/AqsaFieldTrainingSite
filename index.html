@@ -164,9 +164,25 @@ function signupCategoryMatches(gender,category){
  if(c.includes('جميع')||c.includes('كلفئات')||c.includes('طلابوطالبات')||c.includes('طالباتوطلب'))return true;
  return gender==='male'?(c==='طلاب'||c.includes('طلاب')||c.includes('ذكور')):(c==='طالبات'||c.includes('طالبات')||c.includes('اناث'));
 }
-function signupSpecialtyMatches(a,b){
- const x=normalizeArabicMatch(a),y=normalizeArabicMatch(b);
- return !!x&&!!y&&(x===y||x.replace(/ه/g,'')===y.replace(/ه/g,''));
+function signupSpecialtyMatches(studentSpecialty,supervisorGroup){
+ const normalize=normalizeArabicMatch;
+ const x=normalize(studentSpecialty),y=normalize(supervisorGroup);
+ if(!x||!y)return false;
+ if(x===y||x.replace(/ه/g,'')===y.replace(/ه/g,''))return true;
+ const groups={
+  [normalize('العلوم التكنولوجية')]:[
+   'أمن المعلومات','التصميم الجرافيكي','الوسائط المتعددة',
+   'برمجة تطبيقات الهواتف الذكية','تكنولوجيا المعلومات والاتصالات'
+  ],
+  [normalize('العلوم الإدارية')]:[
+   'إدارة الأعمال','السكرتاريا الدولية','العلوم المالية والمصرفية'
+  ],
+  [normalize('العلوم الإعلامية')]:['العلاقات العامة والإعلام'],
+  [normalize('العلوم التربوية')]:['تربية الطفل'],
+  [normalize('علوم التربية البدنية')]:['علوم التربية البدنية'],
+  [normalize('العلاج الوظيفي')]:['العلاج الوظيفي']
+ };
+ return (groups[y]||[]).some(name=>normalize(name)===x);
 }
 function updateSignupSupervisorOptions(){
  const el=$('signupSupervisor');if(!el)return;
