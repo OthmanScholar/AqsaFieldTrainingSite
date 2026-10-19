@@ -8,6 +8,8 @@ create table if not exists public.public_supervisors (
 );
 alter table public.public_supervisors add column if not exists phone text;
 alter table public.public_supervisors add column if not exists is_active boolean not null default true;
+alter table public.public_supervisors add column if not exists user_id uuid references auth.users(id) on delete set null;
+create unique index if not exists public_supervisors_user_id_unique_idx on public.public_supervisors (user_id) where user_id is not null;
 alter table public.public_supervisors enable row level security;
 revoke select on table public.public_supervisors from anon, authenticated;
 grant select (id, name, region, category, specialty, is_active) on public.public_supervisors to anon, authenticated;
