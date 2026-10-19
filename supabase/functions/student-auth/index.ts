@@ -43,10 +43,26 @@ function categoryMatches(gender: 'male' | 'female', category: string): boolean {
   if (c.includes('جميع') || c.includes('كل') || c.includes('طلاب وطالبات') || c.includes('طالبات وطلاب')) return true;
   return gender === 'male' ? (c.includes('طلاب') || c.includes('ذكور')) : (c.includes('طالبات') || c.includes('اناث'));
 }
-function specialtyMatches(a: string, b: string): boolean {
-  const x = normalizeArabic(a).replace(/ال/g, '').replace(/[\s\-_]/g, '');
-  const y = normalizeArabic(b).replace(/ال/g, '').replace(/[\s\-_]/g, '');
-  return !!x && !!y && x === y;
+function specialtyMatches(studentSpecialty: string, supervisorGroup: string): boolean {
+  const normalize = (v: string) => normalizeArabic(v).replace(/ال/g, '').replace(/[\s\-_]/g, '');
+  const x = normalize(studentSpecialty);
+  const y = normalize(supervisorGroup);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const groups: Record<string, string[]> = {
+    [normalize('العلوم التكنولوجية')]: [
+      'أمن المعلومات', 'التصميم الجرافيكي', 'الوسائط المتعددة',
+      'برمجة تطبيقات الهواتف الذكية', 'تكنولوجيا المعلومات والاتصالات'
+    ],
+    [normalize('العلوم الإدارية')]: [
+      'إدارة الأعمال', 'السكرتاريا الدولية', 'العلوم المالية والمصرفية'
+    ],
+    [normalize('العلوم الإعلامية')]: ['العلاقات العامة والإعلام'],
+    [normalize('العلوم التربوية')]: ['تربية الطفل'],
+    [normalize('علوم التربية البدنية')]: ['علوم التربية البدنية'],
+    [normalize('العلاج الوظيفي')]: ['العلاج الوظيفي']
+  };
+  return (groups[y] || []).some(name => normalize(name) === x);
 }
 function requiredEnv(key: string): string { const v = Deno.env.get(key); if (!v) throw new Error('Missing server secret: ' + key); return v; }
 function tempPassword(): string {
