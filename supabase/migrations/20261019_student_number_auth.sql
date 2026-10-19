@@ -9,7 +9,8 @@ create table if not exists public.public_supervisors (
 alter table public.public_supervisors add column if not exists phone text;
 alter table public.public_supervisors add column if not exists is_active boolean not null default true;
 alter table public.public_supervisors enable row level security;
-grant select on public.public_supervisors to anon, authenticated;
+revoke select on table public.public_supervisors from anon, authenticated;
+grant select (id, name, region, category, specialty, is_active) on public.public_supervisors to anon, authenticated;
 drop policy if exists "public reads active supervisors for signup" on public.public_supervisors;
 create policy "public reads active supervisors for signup" on public.public_supervisors
 for select to anon, authenticated using (is_active = true);
@@ -28,6 +29,7 @@ create table if not exists public.eligible_student_roster (
 );
 alter table public.eligible_student_roster add column if not exists is_active boolean not null default true;
 alter table public.eligible_student_roster enable row level security;
+revoke all on table public.eligible_student_roster from anon, authenticated;
 alter table public.student_profiles add column if not exists student_area text;
 alter table public.student_profiles add column if not exists supervisor_name text;
 alter table public.student_profiles add column if not exists supervisor_phone text;
@@ -40,6 +42,7 @@ create table if not exists public.student_password_reset_requests (
  resolved_by uuid references auth.users(id) on delete set null, resolution_note text
 );
 alter table public.student_password_reset_requests enable row level security;
+revoke all on table public.student_password_reset_requests from anon, authenticated;
 create index if not exists student_password_reset_requests_status_date_idx on public.student_password_reset_requests (status, requested_at desc);
 create index if not exists student_password_reset_requests_number_idx on public.student_password_reset_requests (university_number);
 do $$ begin
