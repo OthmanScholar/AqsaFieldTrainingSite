@@ -132,9 +132,9 @@ function normalizeArabicMatch(value){
 function signupRegionMatches(area,region){
  const a=normalizeArabicMatch(area),r=normalizeArabicMatch(region);
  if(!a||!r)return false;
- if(r.includes('مناطق')||r.includes('فرعين')||r.includes('فرعان')||r.includes('كلغزه')||r==='الكل')return true;
+ if(r.includes('مناطق')||r.includes('كلمناظق')||r.includes('جميعمناظق')||r.includes('فرعين')||r.includes('فرعان')||r.includes('كلغزه')||r==='الكل')return true;
  if(a.includes('غزه')||a.includes('شمال'))return r.includes('غزه')||r.includes('شمال');
- if(a.includes('وسطى'))return r.includes('وسطى');
+ if(a.includes('وسطي'))return r.includes('وسطي');
  if(a.includes('خانيونس')||a.includes('رفح'))return r.includes('جنوب')||r.includes('خانيونس')||r.includes('رفح');
  return r.includes(a);
 }
