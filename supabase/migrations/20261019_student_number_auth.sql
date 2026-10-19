@@ -13,6 +13,7 @@ create unique index if not exists public_supervisors_user_id_unique_idx on publi
 alter table public.public_supervisors enable row level security;
 revoke select on table public.public_supervisors from anon, authenticated;
 grant select (id, name, region, category, specialty, is_active) on public.public_supervisors to anon, authenticated;
+grant select (phone) on public.public_supervisors to authenticated; -- contact numbers are available after sign-in only
 drop policy if exists "public reads active supervisors for signup" on public.public_supervisors;
 create policy "public reads active supervisors for signup" on public.public_supervisors
 for select to anon, authenticated using (is_active = true);
