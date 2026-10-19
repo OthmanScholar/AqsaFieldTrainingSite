@@ -115,10 +115,30 @@ document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('c
 $('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 async function loadEntities(){if(!sb){$('entitiesList').textContent='خدمة Supabase غير متاحة.';return}const {data,error}=await sb.from('public_training_entities').select('id,name,entity_type,governorate,registration_url').order('name');if(error){$('entitiesList').textContent='تعذر تحميل الجهات. تأكد من تنفيذ إعداد قاعدة البيانات ومنح صلاحية العرض المحدود.';return}if(!data?.length){$('entitiesList').textContent='لا توجد جهات معتمدة منشورة حاليًا.';return}$('entitiesList').innerHTML='<div class="tablewrap"><table><thead><tr><th>الجهة</th><th>النوع</th><th>المنطقة</th><th>التسجيل</th></tr></thead><tbody>'+data.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.entity_type||'—')}</td><td>${esc(x.governorate||'—')}</td><td>${x.registration_url?`<a class="btn ghost small" target="_blank" rel="noopener" href="${safeUrl(x.registration_url)}">رابط الجهة</a>`:'—'}</td></tr>`).join('')+'</tbody></table></div>'}
-const supervisorSeed=[{"name": "ابراهيم خليل إبراهيم روقة", "region": "غزة", "category": "طالبات", "specialty": "تربية طفل"}, {"name": "نبيل سليم حمدان الأغا", "region": "كل المناطق", "category": "طلاب", "specialty": "علوم التربية البدنية"}, {"name": "سهيل محمد ضاهر الأغا", "region": "كل المناطق", "category": "طلاب", "specialty": "علوم التربية البدنية"}, {"name": "فؤاد محمد فؤاد لظن", "region": "الجنوب", "category": "الجميع", "specialty": "العلاج الوظيفي"}, {"name": "عبد الرازق فضل خضير", "region": "غزة", "category": "الجميع", "specialty": "العلاج الوظيفي"}, {"name": "صابر سليمان موسى ابو موسى", "region": "غزة", "category": "الجميع", "specialty": "العلاج الوظيفي"}, {"name": "اسلام توفيق محمد عبد العزيز", "region": "غزة", "category": "الجميع", "specialty": "العلاج الوظيفي"}, {"name": "موسى كليب محمد أبو مصطفى", "region": "غزة", "category": "الجميع", "specialty": "العلاج الوظيفي"}, {"name": "عمر محمد خليل النجار", "region": "كل المناطق", "category": "طلاب", "specialty": "العلوم التكنولوجية"}, {"name": "يوسف سليم أحمد ابو زيد", "region": "كل المناطق", "category": "طلاب", "specialty": "العلوم التكنولوجية"}, {"name": "غادة أيمن الشيخ علي", "region": "كل المناطق", "category": "طالبات", "specialty": "العلوم التكنولوجية"}, {"name": "أحمد عبد المجيد أحمد الحسنات", "region": "كل المناطق", "category": "طلاب", "specialty": "العلوم التكنولوجية"}, {"name": "سهام ابو عاذرة", "region": "الجنوب", "category": "الجميع", "specialty": "العلوم الإدارية"}, {"name": "عثمان محمد العثماني", "region": "كل المناطق", "category": "طالبات", "specialty": "العلوم التربوية", "phone": "0598983625"}, {"name": "آلاء ابراهيم الهور", "region": "الجنوب والوسطى", "category": "طالبات", "specialty": "العلوم التربوية"}, {"name": "يسرى حمد", "region": "الجنوب والوسطى", "category": "طالبات", "specialty": "العلوم الإدارية"}, {"name": "نائل النعيزي", "region": "غزة", "category": "الجميع", "specialty": "العلوم الإدارية"}, {"name": "حازم أبو حميد", "region": "غزة", "category": "الجميع", "specialty": "العلوم الإعلامية"}, {"name": "أحمد الطويل", "region": "الوسطى والجنوب", "category": "الجميع", "specialty": "العلوم الإعلامية"}];
+const supervisorSeed=[
+ {"name":"أ. رغدة الشيخ علي","region":"جميع المناطق","category":"طالبات","specialty":"العلوم التكنولوجية"},
+ {"name":"أ. عمر النجار","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
+ {"name":"أ. سهام أبو عاذرة","region":"جميع المناطق","category":"طلاب وطالبات","specialty":"العلوم الإدارية"},
+ {"name":"د. نائل العنزي","region":"غزة والشمال","category":"طلاب وطالبات","specialty":"العلوم الإدارية"},
+ {"name":"أ. يوسف أبو زيد","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
+ {"name":"د. نبيل الآغا","region":"جميع المناطق","category":"طلاب وطالبات","specialty":"علوم التربية البدنية"},
+ {"name":"د. فؤاد لطن","region":"الهلال الأحمر خان يونس","category":"طلاب وطالبات","specialty":"العلاج الوظيفي"},
+ {"name":"أ. إسلام عبد العزيز","region":"الوفا - مستشفى الشفاء - المغازي","category":"طلاب وطالبات","specialty":"العلاج الوظيفي"},
+ {"name":"أ. يسرا حمد","region":"الوسطى","category":"طالبات","specialty":"العلوم الإدارية"},
+ {"name":"د. أحمد أبو جزر","region":"الوسطى","category":"طلاب","specialty":"العلوم الإدارية"},
+ {"name":"أ. أحمد الطويل","region":"الوسطى والجنوب","category":"طلاب وطالبات","specialty":"العلوم الإعلامية"},
+ {"name":"أ. حازم أبو حميد","region":"غزة والشمال","category":"طلاب وطالبات","specialty":"العلوم الإعلامية"},
+ {"name":"د. موسى أبو مصطفى","region":"مستشفى حمد - دير البلح - النصيرات","category":"طلاب وطالبات","specialty":"العلاج الوظيفي"},
+ {"name":"د. عثمان العثماني","region":"جميع المناطق","category":"طالبات","specialty":"العلوم التربوية"},
+ {"name":"أ. عمار الهباش","region":"جميع المناطق","category":"طالبات","specialty":"العلوم التكنولوجية"},
+ {"name":"أ. أحمد الحسنات","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
+ {"name":"د. أحمد دوابة","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"}
+];
 async function loadSupervisors(){
  if(!sb){currentSupervisorRecords=[];renderSupervisorRows(supervisorSeed);updateSignupSupervisorOptions();return}
- const {data,error}=await sb.from('public_supervisors').select('id,name,region,category,specialty,is_active').eq('is_active',true).order('name');
+ const {data:{session}}=await sb.auth.getSession();
+ const columns=session?.user?'id,name,region,category,specialty,is_active,phone':'id,name,region,category,specialty,is_active';
+ const {data,error}=await sb.from('public_supervisors').select(columns).eq('is_active',true).order('name');
  currentSupervisorRecords=!error&&Array.isArray(data)?data.filter(x=>x.is_active!==false):[];
  renderSupervisorRows(currentSupervisorRecords.length?currentSupervisorRecords:supervisorSeed);
  updateSignupSupervisorOptions();
@@ -133,9 +153,9 @@ function signupRegionMatches(area,region){
  const a=normalizeArabicMatch(area),r=normalizeArabicMatch(region);
  if(!a||!r)return false;
  if(r.includes('مناطق')||r.includes('كلمناظق')||r.includes('جميعمناظق')||r.includes('فرعين')||r.includes('فرعان')||r.includes('كلغزه')||r==='الكل')return true;
- if(a.includes('غزه')||a.includes('شمال'))return r.includes('غزه')||r.includes('شمال');
- if(a.includes('وسطي'))return r.includes('وسطي');
- if(a.includes('خانيونس')||a.includes('رفح'))return r.includes('جنوب')||r.includes('خانيونس')||r.includes('رفح');
+ if(a.includes('غزه')||a.includes('شمال'))return r.includes('غزه')||r.includes('شمال')||r.includes('شفاء');
+ if(a.includes('وسطي'))return r.includes('وسطي')||r.includes('مغازي')||r.includes('ديربلح')||r.includes('نصيرات');
+ if(a.includes('جنوب')||a.includes('خانيونس')||a.includes('رفح'))return r.includes('جنوب')||r.includes('خانيونس')||r.includes('رفح');
  return r.includes(a);
 }
 function signupCategoryMatches(gender,category){
@@ -164,7 +184,12 @@ function updateSignupSupervisorOptions(){
  el.disabled=false;
 }
 
-function renderSupervisorRows(rows){const list=[...(rows||[])];const own=list.find(x=>String(x.name||'').trim()==='عثمان محمد العثماني');if(own){own.phone='0598983625';own.region='كل المناطق';own.specialty=own.specialty||'العلوم التربوية';own.category=own.category||'طالبات';own.role='مساعد رئيس قسم التدريب الميداني'}else list.push({name:'عثمان محمد العثماني',specialty:'العلوم التربوية',region:'كل المناطق',category:'طالبات',phone:'0598983625',role:'مساعد رئيس قسم التدريب الميداني'});const alaa=list.find(x=>String(x.name||'').trim()==='علاء عيد'||String(x.name||'').trim()==='د. علاء عيد');if(alaa){alaa.name='د. علاء عيد';alaa.phone='0593418641';alaa.role='رئيس قسم التدريب الميداني'}else list.push({name:'د. علاء عيد',specialty:'إدارة التدريب الميداني',region:'كل المناطق',category:'الجميع',phone:'0593418641',role:'رئيس قسم التدريب الميداني'});$('supervisorsList').innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>التخصص</th><th>المنطقة</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+list.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.role||'مشرف التدريب الميداني')}</td><td>${esc(x.specialty)}</td><td>${esc(x.region)}</td><td>${esc(x.category)}</td><td>${x.phone?`<a href="tel:${esc(x.phone)}">${esc(x.phone)}</a>`:'—'}</td></tr>`).join('')+'</tbody></table></div>'}
+function renderSupervisorRows(rows){
+ const list=[...(rows||[])];
+ $('supervisorsList').innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>التخصص</th><th>المنطقة / مكان الإشراف</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+
+ list.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.role||'مشرف التدريب الميداني')+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.region)+'</td><td>'+esc(x.category)+'</td><td>'+(x.phone?'<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>':'—')+'</td></tr>').join('')+
+ '</tbody></table></div>';
+}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function safeUrl(u){try{const x=new URL(u);return ['https:','http:'].includes(x.protocol)?x.href:'#'}catch{return '#'}}
 function toggleAuthView(view){
