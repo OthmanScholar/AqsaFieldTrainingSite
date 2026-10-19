@@ -1,0 +1,38 @@
+name: Student auth code checks
+
+on:
+  push:
+    branches:
+      - feature/student-number-auth
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate inline JavaScript syntax
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
+            .map(match => match[1].trim()).filter(Boolean);
+          if (!scripts.length) throw new Error('No inline JavaScript found');
+          scripts.forEach((source, i) => new vm.Script(source, { filename: `index.html:inline-script-${i + 1}` }));
+          console.log(`Validated ${scripts.length} inline script(s)`);
+          NODE
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check the Edge Function
+        run: deno check supabase/functions/student-auth/index.ts
