@@ -1,0 +1,209 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const productionOrigin = 'https://aqsa-field-training.netlify.app';
+
+function corsHeadersFor(origin: string) {
+  const allowed = origin === productionOrigin
+    || /^https:\/\/deploy-preview-[0-9]+--aqsa-field-training\.netlify\.app$/.test(origin)
+    || /^http:\/\/localhost(?::[0-9]+)?$/.test(origin)
+    || /^http:\/\/127\.0\.0\.1(?::[0-9]+)?$/.test(origin);
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : productionOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json; charset=utf-8',
+    'Vary': 'Origin',
+  };
+}
+
+function json(body: Record<string, unknown>, status = 200, origin = productionOrigin) {
+  return new Response(JSON.stringify(body), { status, headers: corsHeadersFor(origin) });
+}
+function digits(v: unknown): string { return String(v ?? '').replace(/\D/g, ''); }
+function normalizeArabic(v: unknown): string {
+  return String(v ?? '').trim().toLowerCase().normalize('NFD')
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ');
+}
+function syntheticEmail(n: string): string { return 'student-' + n + '@students.aqsa.invalid'; }
+function genderFromNumber(n: string): 'male' | 'female' | null {
+  if (n.startsWith('122')) return 'male'; if (n.startsWith('222')) return 'female'; return null;
+}
+function regionMatches(area: string, region: string): boolean {
+  const a = normalizeArabic(area).replace(/ال/g, ''), r = normalizeArabic(region).replace(/ال/g, '');
+  if (['كل المناطق','كل غزة','الفرعين','الفرعان','جميع المناطق','الكل'].some(x => r.includes(normalizeArabic(x).replace(/ال/g, '')))) return true;
+  if (a.includes('غزه') || a.includes('شمال')) return r.includes('غزه') || r.includes('شمال') || r.includes('شفاء');
+  if (a.includes('وسطي')) return r.includes('وسطي') || r.includes('مغازي') || r.includes('دير بلح') || r.includes('نصيرات');
+  if (a.includes('جنوب') || a.includes('خانيونس') || a.includes('رفح')) return r.includes('جنوب') || r.includes('خانيونس') || r.includes('رفح');
+  return a === r || r.includes(a);
+}
+function categoryMatches(gender: 'male' | 'female', category: string): boolean {
+  // Preserve the letters in "طالبات"; stripping "ال" here corrupts that word and rejects female matches.
+  const c = normalizeArabic(category).replace(/[\s\-_]/g, '');
+  if (c.includes('جميع') || c.includes('كل') || c.includes('طلابوطالبات') || c.includes('طالباتوطالبات') || c.includes('طالباتوطالب')) return true;
+  return gender === 'male' ? (c.includes('طلاب') || c.includes('ذكور')) : (c.includes('طالبات') || c.includes('اناث'));
+}
+function specialtyMatches(studentSpecialty: string, supervisorGroup: string): boolean {
+  const normalize = (v: string) => normalizeArabic(v).replace(/ال/g, '').replace(/[\s\-_]/g, '');
+  const x = normalize(studentSpecialty);
+  const y = normalize(supervisorGroup);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const groups: Record<string, string[]> = {
+    [normalize('العلوم التكنولوجية')]: [
+      'أمن المعلومات', 'التصميم الجرافيكي', 'الوسائط المتعددة',
+      'برمجة تطبيقات الهواتف الذكية', 'تكنولوجيا المعلومات والاتصالات'
+    ],
+    [normalize('العلوم الإدارية')]: [
+      'إدارة الأعمال', 'السكرتاريا الدولية', 'العلوم المالية والمصرفية'
+    ],
+    [normalize('العلوم الإعلامية')]: ['العلاقات العامة والإعلام'],
+    [normalize('العلوم التربوية')]: ['تربية الطفل'],
+    [normalize('علوم التربية البدنية')]: ['علوم التربية البدنية'],
+    [normalize('العلاج الوظيفي')]: ['العلاج الوظيفي']
+  };
+  return (groups[y] || []).some(name => normalize(name) === x);
+}
+function requiredEnv(key: string): string { const v = Deno.env.get(key); if (!v) throw new Error('Missing server secret: ' + key); return v; }
+function tempPassword(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$%';
+  const random = new Uint8Array(18); crypto.getRandomValues(random);
+  return Array.from(random, b => alphabet[b % alphabet.length]).join('') + 'aA7!';
+}
+
+Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin') || productionOrigin;
+  const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
+  if (req.method === 'OPTIONS') return new Response('ok', { status: 200, headers: corsHeadersFor(origin) });
+  if (req.method !== 'POST') return respond({ error: 'طريقة الطلب غير مدعومة.' }, 405);
+  let body: Record<string, any>;
+  try { body = await req.json(); } catch { return respond({ error: 'تعذر قراءة بيانات الطلب.' }, 400); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return respond({ error: 'بيانات الطلب غير صحيحة.' }, 400);
+  try {
+    const url = requiredEnv('SUPABASE_URL');
+    const serviceKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+    const anonKey = requiredEnv('SUPABASE_ANON_KEY');
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const action = String(body.action || '');
+
+    if (action === 'signup') {
+      const fullName = String(body.full_name || '').trim();
+      const n = digits(body.university_number);
+      const phone = String(body.phone || '').trim();
+      const area = String(body.student_area || '').trim();
+      const specialtyId = Number(body.specialty_id);
+      const supervisorId = Number(body.supervisor_id);
+      const password = String(body.password || '');
+      const gender = genderFromNumber(n);
+      if (!fullName || !n || !phone || !area || !Number.isSafeInteger(specialtyId) || specialtyId < 1 || !Number.isSafeInteger(supervisorId) || supervisorId < 1 || password.length < 8) return respond({ error: 'أكمل الحقول المطلوبة واختر تخصصًا ومشرفًا، واجعل كلمة المرور 8 أحرف على الأقل.' }, 400);
+      if (!gender) return respond({ error: 'الرقم الجامعي غير مطابق: 122 للطلاب و222 للطالبات.' }, 400);
+      const { data: roster, error: rosterError } = await admin.from('eligible_student_roster').select('university_number,full_name,gender,specialty_id,is_active').eq('university_number', n).maybeSingle();
+      if (rosterError) return respond({ error: 'قائمة الطلاب المعتمدة غير جاهزة. على القسم مراجعة إعداد قاعدة البيانات وقائمة التسجيل أولًا.' }, 503);
+      if (!roster || roster.is_active === false) return respond({ error: 'الرقم الجامعي غير موجود في قائمة التسجيل المعتمدة. راجع قسم التدريب الميداني.' }, 403);
+      if (normalizeArabic(roster.full_name).replace(/ال/g, '').replace(/\s/g, '') !== normalizeArabic(fullName).replace(/ال/g, '').replace(/\s/g, '')) return respond({ error: 'الاسم لا يطابق كشف القسم المعتمد.' }, 403);
+      if (roster.gender !== gender) return respond({ error: 'فئة الطالب لا تطابق بيانات القسم.' }, 403);
+      if (roster.specialty_id != null && Number(roster.specialty_id) !== specialtyId) return respond({ error: 'التخصص لا يطابق تخصص الطالب في كشف القسم.' }, 403);
+      const { data: specialty, error: spError } = await admin.from('specialties').select('id,name').eq('id', specialtyId).eq('is_active', true).maybeSingle();
+      if (spError || !specialty) return respond({ error: 'التخصص المختار غير متاح. حدّث الصفحة واختر تخصصًا معتمدًا.' }, 400);
+      const { data: supervisor, error: supError } = await admin.from('public_supervisors').select('id,name,region,category,specialty,phone,is_active,user_id').eq('id', supervisorId).maybeSingle();
+      if (supError || !supervisor || supervisor.is_active === false) return respond({ error: 'المشرف المختار غير موجود أو غير نشط.' }, 400);
+      if (!regionMatches(area, supervisor.region) || !categoryMatches(gender, supervisor.category) || !specialtyMatches(specialty.name, supervisor.specialty)) return respond({ error: 'المشرف لا يطابق المنطقة أو التخصص أو فئة الطالب.' }, 400);
+      if (!supervisor.user_id) return respond({ error: 'حساب دخول هذا المشرف غير مربوط بالدليل بعد. على القسم ربط حساب المشرف أولًا حتى يظهر الطالب في كشفه.' }, 409);
+      const { data: supervisorRole, error: supervisorRoleError } = await admin.from('user_roles').select('role,is_active').eq('user_id', supervisor.user_id).maybeSingle();
+      if (supervisorRoleError || !supervisorRole || supervisorRole.role !== 'supervisor' || supervisorRole.is_active === false) return respond({ error: 'حساب المشرف غير نشط أو لم تُضبط له صلاحية مشرف. راجع القسم.' }, 409);
+      const { data: existing, error: exErr } = await admin.from('student_profiles').select('user_id').eq('university_number', n).maybeSingle();
+      if (exErr) return respond({ error: 'تعذر التحقق من الرقم الجامعي.' }, 500);
+      if (existing) return respond({ error: 'يوجد حساب مسجل بهذا الرقم الجامعي. استخدم الدخول أو راجع القسم.' }, 409);
+      const email = syntheticEmail(n);
+      const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: fullName, university_number: n, gender, specialty_id: String(specialtyId), phone } });
+      if (createError || !created.user) return respond({ error: createError?.message || 'تعذر إنشاء الحساب.' }, 400);
+      const { error: profileError } = await admin.from('student_profiles').upsert({ user_id: created.user.id, university_number: n, full_name: fullName, gender, specialty_id: specialtyId, phone, email, completed_hours: null, eligibility_status: 'pending', student_area: area, supervisor_name: supervisor.name, supervisor_phone: supervisor.phone || null }, { onConflict: 'user_id' });
+      if (profileError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر حفظ ملف الطالب؛ أُلغي الحساب الجديد. راجع مخطط قاعدة البيانات.' }, 500); }
+      const { error: roleError } = await admin.from('user_roles').upsert({ user_id: created.user.id, role: 'student', is_active: true }, { onConflict: 'user_id' });
+      if (roleError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر إنشاء صلاحية الطالب؛ أُلغي الحساب الجديد.' }, 500); }
+      const { error: assignmentError } = await admin.from('supervisor_assignments').upsert({ supervisor_user_id: supervisor.user_id, student_user_id: created.user.id, specialty_id: specialtyId, training_entity_id: null }, { onConflict: 'supervisor_user_id,student_user_id' });
+      if (assignmentError) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر تسجيل إسناد المشرف. تأكد من إعداد جدول التكليفات وربط حساب المشرف، ثم أعد المحاولة؛ أُلغي الحساب الجديد.' }, 500); }
+      const { data: login, error: loginError } = await client.auth.signInWithPassword({ email, password });
+      if (loginError || !login.session) { await admin.auth.admin.deleteUser(created.user.id); return respond({ error: 'تعذر إكمال الدخول بعد إنشاء الحساب؛ أُلغي الحساب الجديد.' }, 500); }
+      return respond({ ok: true, session: login.session, user: login.user });
+    }
+
+    if (action === 'login') {
+      const identifier = String(body.identifier || '').trim(); const password = String(body.password || '');
+      if (!identifier || !password) return respond({ error: 'أدخل الرقم الجامعي أو البريد الوظيفي وكلمة المرور.' }, 400);
+      let email = identifier;
+      if (!identifier.includes('@')) {
+        const n = digits(identifier); if (!n) return respond({ error: 'أدخل رقمًا جامعيًا صحيحًا.' }, 400);
+        const { data: profile, error } = await admin.from('student_profiles').select('email').eq('university_number', n).maybeSingle();
+        if (error || !profile?.email) return respond({ error: 'لم نعثر على حساب بهذا الرقم الجامعي. راجع القسم إذا كنت مسجلًا.' }, 401);
+        email = String(profile.email);
+      }
+      const { data: login, error } = await client.auth.signInWithPassword({ email, password });
+      if (error || !login.session) return respond({ error: 'تعذر تسجيل الدخول. تحقق من الرقم الجامعي/البريد الوظيفي وكلمة المرور.' }, 401);
+      return respond({ ok: true, session: login.session, user: login.user });
+    }
+
+    if (action === 'request_reset') {
+      const n = digits(body.university_number); const phone = String(body.phone || '').trim();
+      if (!n || !phone) return respond({ error: 'أدخل الرقم الجامعي ورقم الجوال المسجل.' }, 400);
+      const generic = 'إذا تطابقت بياناتك، فسيصل الطلب للقسم لمراجعته. إذا لم يصلك رد، راجع قسم التدريب الميداني مباشرة.';
+      const { data: profile, error } = await admin.from('student_profiles').select('university_number,phone').eq('university_number', n).maybeSingle();
+      if (error || !profile || digits(profile.phone) !== digits(phone)) return respond({ ok: true, message: generic });
+      const { data: pending, error: pErr } = await admin.from('student_password_reset_requests').select('id').eq('university_number', n).eq('status', 'pending').limit(1);
+      if (!pErr && pending?.length) return respond({ ok: true, message: generic });
+      const { error: insertError } = await admin.from('student_password_reset_requests').insert({ university_number: n, phone, status: 'pending' });
+      if (insertError) return respond({ error: 'خدمة الاسترجاع غير جاهزة؛ راجع القسم مباشرة.' }, 503);
+      return respond({ ok: true, message: generic });
+    }
+
+    const authHeader = req.headers.get('Authorization') || ''; const token = authHeader.replace(/^Bearer\s+/i, '');
+    if (!token) return respond({ error: 'يلزم تسجيل الدخول.' }, 401);
+    const { data: authData, error: authError } = await client.auth.getUser(token);
+    if (authError || !authData.user) return respond({ error: 'جلسة الدخول غير صالحة.' }, 401);
+    const currentUser = authData.user;
+
+    if (action === 'change_password') {
+      const newPassword = String(body.new_password || '');
+      if (newPassword.length < 10) return respond({ error: 'كلمة المرور الجديدة يجب أن تتكون من 10 أحرف على الأقل.' }, 400);
+      if (currentUser.user_metadata?.must_change_password !== true) return respond({ error: 'لا يوجد طلب لتغيير كلمة مرور مؤقتة على هذا الحساب.' }, 403);
+      const metadata = { ...(currentUser.user_metadata || {}), must_change_password: false };
+
+      const { error } = await admin.auth.admin.updateUserById(currentUser.id, { password: newPassword, user_metadata: metadata });
+      if (error) return respond({ error: 'تعذر تغيير كلمة المرور.' }, 500);
+      return respond({ ok: true, message: 'تم تغيير كلمة المرور.' });
+    }
+
+    const { data: role, error: roleError } = await admin.from('user_roles').select('role,is_active').eq('user_id', currentUser.id).maybeSingle();
+    if (roleError || !role || role.is_active === false || !['admin', 'department_head'].includes(role.role)) return respond({ error: 'هذه العملية متاحة لرئيس القسم أو مدير النظام فقط.' }, 403);
+
+    if (action === 'list_reset_requests') {
+      const { data: requests, error } = await admin.from('student_password_reset_requests').select('id,university_number,phone,status,requested_at').eq('status', 'pending').order('requested_at', { ascending: true }).limit(100);
+      if (error) return respond({ error: 'تعذر تحميل طلبات الاسترجاع.' }, 500);
+      const numbers = (requests || []).map(x => x.university_number);
+      const { data: profiles } = numbers.length ? await admin.from('student_profiles').select('university_number,full_name').in('university_number', numbers) : { data: [] as any[] };
+      const names = new Map((profiles || []).map(x => [x.university_number, x.full_name]));
+      return respond({ ok: true, requests: (requests || []).map(x => ({ ...x, full_name: names.get(x.university_number) || '' })) });
+    }
+
+    if (action === 'admin_reset_password') {
+      const id = Number(body.request_id); if (!Number.isSafeInteger(id) || id < 1) return respond({ error: 'رقم الطلب غير صحيح.' }, 400);
+      const { data: request, error: reqError } = await admin.from('student_password_reset_requests').select('id,university_number,status').eq('id', id).eq('status', 'pending').maybeSingle();
+      if (reqError || !request) return respond({ error: 'الطلب غير موجود أو تمت معالجته.' }, 404);
+      const { data: profile, error: profileError } = await admin.from('student_profiles').select('user_id').eq('university_number', request.university_number).maybeSingle();
+      if (profileError || !profile) return respond({ error: 'ملف الطالب غير موجود.' }, 404);
+      const { data: target, error: targetError } = await admin.auth.admin.getUserById(profile.user_id);
+      if (targetError || !target.user) return respond({ error: 'حساب الطالب غير موجود.' }, 404);
+      const temporary = tempPassword();
+      const metadata = { ...(target.user.user_metadata || {}), must_change_password: true };
+
+      const { error: updateError } = await admin.auth.admin.updateUserById(profile.user_id, { password: temporary, user_metadata: metadata });
+      if (updateError) return respond({ error: 'تعذر إصدار كلمة المرور المؤقتة.' }, 500);
+      const { error: doneError } = await admin.from('student_password_reset_requests').update({ status: 'approved', resolved_at: new Date().toISOString(), resolved_by: currentUser.id }).eq('id', id);
+      if (doneError) return respond({ error: 'تغيّرت كلمة المرور، لكن لم تتحدث حالة الطلب. راجع سجل القسم.' }, 500);
+      return respond({ ok: true, university_number: request.university_number, temporary_password: temporary });
+    }
+    return respond({ error: 'الإجراء المطلوب غير معروف.' }, 400);
+  } catch (e) { return respond({ error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع.' }, 500); }
+});
