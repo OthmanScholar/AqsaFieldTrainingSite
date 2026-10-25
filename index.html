@@ -17,7 +17,11 @@
 <header class="topbar">
   <a class="brand" href="#home">كلية مجتمع الأقصى | التدريب الميداني</a>
   <nav class="nav">
-    <button data-go="home">الرئيسية</button><button data-go="entities">جهات التدريب</button><button data-go="supervisors">المشرفون</button><button data-go="documents">الكتب والنماذج</button><button data-go="portal">بوابة المستخدم</button>
+    <button onclick="navigatePage('home')">الرئيسية</button>
+    <button onclick="navigatePage('entities')">جهات التدريب</button>
+    <button onclick="navigatePage('supervisors')">المشرفون</button>
+    <button onclick="navigatePage('documents')">الكتب والنماذج</button>
+    <button onclick="navigatePage('portal')">بوابة المستخدم</button>
   </nav>
   <div class="topright"><span id="sessionLabel" class="profileline">زائر</span><button id="authToggle" class="btn gold">دخول / تسجيل</button></div>
 </header>
@@ -33,10 +37,10 @@
  </div>
 </section>
 <section class="wrap cards">
- <article class="card"><div class="emoji">🎓</div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
- <article class="card"><div class="emoji">🏢</div><h3>جهات التدريب</h3><p>عرض المؤسسات المعتمدة حسب البيانات المنشورة.</p><button class="btn" data-go="entities">عرض الجهات</button></article>
- <article class="card"><div class="emoji">🧑‍🏫</div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
- <article class="card"><div class="emoji">📋</div><h3>متابعة الطلب والزيارات</h3><p>متابعة حالة الطلب وتقارير الزيارات الأربع بحسب الصلاحية.</p><button class="btn" data-go="portal">فتح البوابة</button></article>
+ <article class="card"><div class="emoji">🎓</div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" onclick="openAuthPanel()">بدء التسجيل</button></article>
+ <article class="card"><div class="emoji">🏢</div><h3>جهات التدريب</h3><p>عرض المؤسسات المعتمدة حسب البيانات المنشورة.</p><button class="btn" onclick="navigatePage('entities')">عرض الجهات</button></article>
+ <article class="card"><div class="emoji">🧑‍🏫</div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" onclick="navigatePage('supervisors')">عرض المشرفين</button></article>
+ <article class="card"><div class="emoji">📋</div><h3>متابعة الطلب والزيارات</h3><p>متابعة حالة الطلب وتقارير الزيارات الأربع بحسب الصلاحية.</p><button class="btn" onclick="navigatePage('portal')">فتح البوابة</button></article>
 </section>
 <div class="wrap">
  <div id="notice" class="notice" role="status" aria-live="polite"></div>
@@ -80,4 +84,3 @@
     <p class="muted">تعرض الصفحة البيانات العامة فقط. معلومات الاتصال الخاصة لا تُعرض للعامة.</p>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>اسم الجهة</th><th>المنطقة الجغرافية</th><th>المرحلة الدراسية</th><th>الحالة</th></tr></thead>
