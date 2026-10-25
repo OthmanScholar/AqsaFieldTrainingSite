@@ -1,5 +1,5 @@
 <script>
-// إعداد ثوابت الاتصال الفعلي بقاعدة بيانات كلية الأقصى للتدريب الميداني
+// إعداد ثوابت الاتصال الفعلي بقاعدة بيانات كلية مجتمع الأقصى
 const SUPABASE_URL = 'https://supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_O28XTWBruit3W6Q8O1VOTA_3hEZJK2E'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -33,10 +33,10 @@ document.getElementById('authToggle').addEventListener('click', () => {
   document.getElementById('authPanel').classList.toggle('hidden');
 });
 
-// ١. فحص وجلب التخصصات الأكاديمية تلقائياً من جدول التخصصات
+// ١. جلب التخصصات الأكاديمية المجهزة مسبقاً في قاعدتك وعرضها بالقائمة
 async function loadSpecialties() {
   try {
-    const { data, error } = await _supabase.from('specialties').select('*').order('name', { ascending: true });
+    const { data, error } = await _supabase.from('specialties').select('*');
     const selectElement = document.getElementById('regSpecialty');
     selectElement.innerHTML = '';
     
@@ -63,7 +63,7 @@ async function loadSpecialties() {
   }
 }
 
-// ٢. فحص وجلب المشرفين وعرضهم في جدول المشرفين بالموقع
+// ٢. جلب دليل المشرفين الجاهز مسبقاً في قاعدتك وعرضه في جدول الموقع
 async function loadSupervisors() {
   try {
     const { data, error } = await _supabase.from('supervisors').select('*');
@@ -74,10 +74,15 @@ async function loadSupervisors() {
 
     if (data && data.length > 0) {
       data.forEach(sup => {
+        // نتحقق من المسميات المحتملة للأعمدة في جدولك (تجنباً لأي اختلاف في الأسماء)
+        let name = sup.name || sup.full_name || 'غير محدد';
+        let specialty = sup.specialty || sup.specialty_name || 'عام';
+        let region = sup.region || sup.location || 'كل المناطق';
+        
         let row = `<tr>
-          <td>${sup.name || sup.full_name || 'غير محدد'}</td>
-          <td>${sup.specialty || 'عام'}</td>
-          <td>${sup.region || 'كل المناطق'}</td>
+          <td>${name}</td>
+          <td>${specialty}</td>
+          <td>${region}</td>
         </tr>`;
         tableBody.insertAdjacentHTML('beforeend', row);
       });
@@ -86,7 +91,7 @@ async function loadSupervisors() {
     }
   } catch (err) {
     console.error('خطأ في تحميل المشرفين:', err.message);
-    document.getElementById('supervisorsTableBody').innerHTML = '<tr><td colspan="3" class="notice error" style="text-align:center;">فشل جلب قائمة المشرفين</td></tr>';
+    document.getElementById('supervisorsTableBody').innerHTML = '<tr><td colspan="3" class="notice error" style="text-align:center;">فشل جلب قائمة المشرفين من الخادم</td></tr>';
   }
 }
 
@@ -128,9 +133,11 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   }
 });
 
-// تشغيل الفحص الكامل فور تحميل الصفحة
+// تشغيل جلب البيانات فور تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
   loadSpecialties();
   loadSupervisors();
 });
 </script>
+</body>
+</html>
