@@ -1,6 +1,6 @@
 <script>
 // إعداد ثوابت الاتصال الفعلي بقاعدة بيانات كلية الأقصى للتدريب الميداني
-const SUPABASE_URL = 'https://qnoabewngjmnhntjyepe.supabase.co'; 
+const SUPABASE_URL = 'https://supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_O28XTWBruit3W6Q8O1VOTA_3hEZJK2E'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -33,7 +33,7 @@ document.getElementById('authToggle').addEventListener('click', () => {
   document.getElementById('authPanel').classList.toggle('hidden');
 });
 
-// تحميل التخصصات الأكاديمية تلقائياً من جدول التخصصات في Supabase
+// ١. فحص وجلب التخصصات الأكاديمية تلقائياً من جدول التخصصات
 async function loadSpecialties() {
   try {
     const { data, error } = await _supabase.from('specialties').select('*').order('name', { ascending: true });
@@ -63,7 +63,34 @@ async function loadSpecialties() {
   }
 }
 
-// معالجة وإرسال طلب تسجيل طالب جديد وتخزينه في نظام الـ Authentication وجدول الملف الشخصي
+// ٢. فحص وجلب المشرفين وعرضهم في جدول المشرفين بالموقع
+async function loadSupervisors() {
+  try {
+    const { data, error } = await _supabase.from('supervisors').select('*');
+    const tableBody = document.getElementById('supervisorsTableBody');
+    tableBody.innerHTML = '';
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      data.forEach(sup => {
+        let row = `<tr>
+          <td>${sup.name || sup.full_name || 'غير محدد'}</td>
+          <td>${sup.specialty || 'عام'}</td>
+          <td>${sup.region || 'كل المناطق'}</td>
+        </tr>`;
+        tableBody.insertAdjacentHTML('beforeend', row);
+      });
+    } else {
+      tableBody.innerHTML = '<tr><td colspan="3" class="muted" style="text-align:center;">لا يوجد مشرفون مسجلون في قاعدة البيانات حالياً</td></tr>';
+    }
+  } catch (err) {
+    console.error('خطأ في تحميل المشرفين:', err.message);
+    document.getElementById('supervisorsTableBody').innerHTML = '<tr><td colspan="3" class="notice error" style="text-align:center;">فشل جلب قائمة المشرفين</td></tr>';
+  }
+}
+
+// معالجة وإرسال طلب تسجيل طالب جديد
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('regName').value;
@@ -73,7 +100,6 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   const password = document.getElementById('regPassword').value;
 
   try {
-    // ١. إنشاء الحساب في نظام الحماية والـ Auth في السيرفر
     const { data: authData, error: authError } = await _supabase.auth.signUp({
       email: email,
       password: password
@@ -82,7 +108,6 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     if (authError) throw authError;
 
     if (authData.user) {
-      // ٢. تخزين بيانات الطالب الإضافية (الاسم، الرقم الجامعي، التخصص) في جدول الطلاب المخصص
       const { error: profileError } = await _supabase.from('students').insert([
         {
           id: authData.user.id,
@@ -95,7 +120,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
 
       if (profileError) throw profileError;
 
-      showNotice('تم إنشاء حساب الطالب بنجاح! يرجى مراجعة بريدك الإلكتروني لتأكيد التسجيل إذا كان التفعيل مطلوباً.');
+      showNotice('تم إنشاء حساب الطالب بنجاح! يرجى مراجعة بريدك الإلكتروني لتأكيد التسجيل.');
       document.getElementById('signupForm').reset();
     }
   } catch (err) {
@@ -103,8 +128,9 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   }
 });
 
-// تشغيل جلب التخصصات فور تحميل الصفحة بالكامل لمنع التجميد
+// تشغيل الفحص الكامل فور تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
   loadSpecialties();
+  loadSupervisors();
 });
 </script>
