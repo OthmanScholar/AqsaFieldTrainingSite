@@ -28,9 +28,9 @@
 <header class="topbar">
   <a class="brand" href="#home">كلية مجتمع الأقصى | التدريب الميداني</a>
   <nav class="nav">
-    <button data-go="home">الرئيسية</button><button data-go="entities">جهات التدريب</button><button data-go="supervisors">المشرفون</button><button data-go="documents">الكتب والنماذج</button><button data-go="portal">بوابة المستخدم</button>
+    <button data-go="home">الرئيسية</button><button data-go="entities">جهات التدريب</button><button data-go="supervisors">المشرفون</button><button data-go="documents">الكتب والنماذج</button><button data-go="portal">بوابة المستخدم</button><button data-go="contact">تواصل معنا</button>
   </nav>
-  <div class="topright"><span id="sessionLabel" class="profileline">زائر</span><button id="authToggle" class="btn gold">دخول / تسجيل</button></div>
+  <div class="topright"><span id="sessionLabel" class="profileline">زائر</span><button id="headLogin" class="btn gold" type="button">دخول رئيس القسم</button><button id="authToggle" class="btn gold">دخول / تسجيل</button></div>
 </header>
 <main id="home">
 <section class="hero">
@@ -93,10 +93,10 @@
    </div>
  </section>
 
- <section id="entitiesPanel" class="panel hidden"><h2>جهات التدريب المعتمدة</h2><p class="muted">تعرض الصفحة البيانات العامة فقط. معلومات الاتصال الخاصة لا تُعرض للعامة.</p><div id="entitiesList">جارٍ تحميل الجهات…</div></section>
+ <section id="entitiesPanel" class="panel hidden"><h2>دليل جهات التدريب</h2><p class="muted">ابحث عن المؤسسة أو صفِّ النتائج حسب التخصص والمنطقة. تُعرض المعلومات العامة فقط.</p><div class="grid2"><div class="field"><label for="entitySearch">اسم المؤسسة</label><input id="entitySearch" placeholder="اكتب اسم المؤسسة للبحث"></div><div class="field"><label for="entitySpecialtyFilter">التخصص</label><select id="entitySpecialtyFilter"><option value="">كل التخصصات</option></select></div><div class="field"><label for="entityAreaFilter">المنطقة</label><select id="entityAreaFilter"><option value="">كل المناطق</option></select></div></div><p id="entityCount" class="field-help"></p><div id="entitiesList">جارٍ تحميل الجهات…</div></section>
  <section id="supervisorsPanel" class="panel hidden"><h2>دليل المشرفين</h2><p class="muted">دليل المشرفين محدث لعام 2026. تُراجع الإدارة بيانات المشرفين ومناطق الإشراف قبل التكليف، ولا تُعرض أرقام الهوية في هذا الدليل.</p><div id="supervisorsList">جارٍ تحميل الدليل…</div></section>
  <section id="documentsPanel" class="panel hidden"><h2>الكتب والنماذج</h2><p>سيتم عرض النماذج الرسمية بعد رفع ملفات القسم المعتمدة. لم تُنشأ نماذج رسمية بديلة عن مستندات القسم.</p><div id="documentsList" class="muted">لا توجد ملفات رسمية مرفوعة حاليًا.</div></section>
- <section id="portalPanel" class="panel hidden"><h2>بوابة التدريب</h2><div id="portalContent"><p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button></div></section>
+ <section id="portalPanel" class="panel hidden"><h2>بوابة التدريب</h2><div id="portalContent"><p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button></div></section>\n <section id="contactPanel" class="panel hidden"><h2>تواصل معنا</h2><p>للاستفسارات المتعلقة بالتدريب الميداني، تواصل مع فريق القسم عبر القنوات الرسمية.</p><div class="team-profiles"><article class="team-profile"><div><h3>د. عثمان محمد العثماني</h3><p>مساعد رئيس قسم التدريب الميداني</p><p><a class="btn" href="https://wa.me/972598983625" target="_blank" rel="noopener">واتساب</a> <a class="btn ghost" href="mailto:om.othmany@alaqsa.edu.ps">البريد الإلكتروني</a></p></div></article><article class="team-profile"><div><h3>د. علاء عيد</h3><p>رئيس قسم التدريب الميداني</p><p><a class="btn" href="https://wa.me/972594619461" target="_blank" rel="noopener">واتساب</a> <a class="btn ghost" href="mailto:as.eid@alaqsa.edu.ps">البريد الإلكتروني</a></p></div></article></div></section>
  <section id="about" class="panel"><h2>آلية الزيارات الميدانية</h2><p>وفق المقترح المرفق: أربع زيارات خلال الفصل، يعبئ المشرف تقرير كل زيارة ويعتمده، ثم يؤكد الطالب حصول الزيارة، ويراجع رئيس القسم التقرير، ثم يحال للشؤون الأكاديمية. يمكن لرئيس القسم تمديد مهلة الزيارة أسبوعًا واحدًا. ويُبنى الكشف المالي على الزيارات المعتمدة.</p></section>
 </div>
 </main>
@@ -108,13 +108,34 @@ const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createC
 const $=id=>document.getElementById(id);
 let currentSession=null,currentRole=null,currentStudentSpecialtyName='',currentSupervisorRecords=[];
 const showNotice=(msg,type='')=>{const n=$('notice');n.textContent=msg;n.className='notice show '+type;n.scrollIntoView({behavior:'smooth',block:'nearest'})};
-const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel'].forEach(id=>$(id).classList.add('hidden'));
-function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel'};if(map[where])$(map[where]).classList.remove('hidden');document.querySelector('.wrap').scrollIntoView({behavior:'smooth',block:'start'});if(where==='portal')renderPortal();}
+const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
+function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};if(map[where])$(map[where]).classList.remove('hidden');document.querySelector('.wrap').scrollIntoView({behavior:'smooth',block:'start'});if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>go('auth')));
 $('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
-async function loadEntities(){if(!sb){$('entitiesList').textContent='خدمة Supabase غير متاحة.';return}const {data,error}=await sb.from('public_training_entities').select('id,name,entity_type,governorate,registration_url').order('name');if(error){$('entitiesList').textContent='تعذر تحميل الجهات. تأكد من تنفيذ إعداد قاعدة البيانات ومنح صلاحية العرض المحدود.';return}if(!data?.length){$('entitiesList').textContent='لا توجد جهات معتمدة منشورة حاليًا.';return}$('entitiesList').innerHTML='<div class="tablewrap"><table><thead><tr><th>الجهة</th><th>النوع</th><th>المنطقة</th><th>التسجيل</th></tr></thead><tbody>'+data.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.entity_type||'—')}</td><td>${esc(x.governorate||'—')}</td><td>${x.registration_url?`<a class="btn ghost small" target="_blank" rel="noopener" href="${safeUrl(x.registration_url)}">رابط الجهة</a>`:'—'}</td></tr>`).join('')+'</tbody></table></div>'}
+let entityDirectoryRows=[];
+function renderEntities(){
+ const term=($('entitySearch')?.value||'').trim().toLocaleLowerCase('ar');
+ const specialty=$('entitySpecialtyFilter')?.value||'';
+ const area=$('entityAreaFilter')?.value||'';
+ const rows=entityDirectoryRows.filter(x=>(!term||(x.name||'').toLocaleLowerCase('ar').includes(term))&&(!specialty||(x.specialty||'')===specialty)&&(!area||(x.governorate||'')===area));
+ $('entityCount').textContent='عدد الجهات الظاهرة: '+rows.length+' من '+entityDirectoryRows.length;
+ if(!rows.length){$('entitiesList').textContent='لا توجد نتائج مطابقة. جرّب تغيير كلمات البحث أو عوامل التصفية.';return}
+ $('entitiesList').innerHTML='<div class="tablewrap"><table><thead><tr><th>المؤسسة</th><th>التخصص</th><th>المنطقة / العنوان</th><th>النوع</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.governorate||'—')+'</td><td>'+esc(x.entity_type||'—')+'</td></tr>').join('')+'</tbody></table></div>';
+}
+async function loadEntities(){
+ if(!sb){$('entitiesList').textContent='خدمة Supabase غير متاحة.';return}
+ const {data,error}=await sb.from('public_training_entities').select('id,name,entity_type,governorate,registration_url,specialty').order('name');
+ if(error){$('entitiesList').textContent='تعذر تحميل الجهات. تأكد من إعداد قاعدة البيانات وصلاحية العرض العام.';return}
+ entityDirectoryRows=(data||[]).map(x=>({...x,specialty:x.specialty||''}));
+ const specialties=[...new Set(entityDirectoryRows.map(x=>x.specialty).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+ const areas=[...new Set(entityDirectoryRows.map(x=>x.governorate).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+ $('entitySpecialtyFilter').innerHTML='<option value="">كل التخصصات</option>'+specialties.map(x=>'<option>'+esc(x)+'</option>').join('');
+ $('entityAreaFilter').innerHTML='<option value="">كل المناطق</option>'+areas.map(x=>'<option>'+esc(x)+'</option>').join('');
+ ['entitySearch','entitySpecialtyFilter','entityAreaFilter'].forEach(id=>$(id).addEventListener(id==='entitySearch'?'input':'change',renderEntities));
+ renderEntities();
+}
 const supervisorSeed=[
  {"name":"أ. رغدة الشيخ علي","region":"جميع المناطق","category":"طالبات","specialty":"العلوم التكنولوجية"},
  {"name":"أ. عمر النجار","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
@@ -353,7 +374,7 @@ async function loadPasswordResetRequests(){
   });
  }catch(err){r.textContent=err.message||'تعذر تحميل طلبات الاسترجاع.'}
 }
-async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();sb.auth.onAuthStateChange(()=>refreshSession())}
+async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();$('headLogin').addEventListener('click',()=>go('auth'));sb.auth.onAuthStateChange(()=>refreshSession())}
 init();
 </script>
 </body></html>
