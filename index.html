@@ -297,7 +297,7 @@ $('passwordResetForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const submit=e.submitter;if(submit)submit.disabled=true;
  try{
-  const result=await studentAuthRequest({action:'request_reset',university_number:$('resetUniversityNumber').value.trim(),phone:$('resetPhone').value.trim()});
+  const result=await studentAuthRequest({action:'request_reset',university_number:$('resetUniversityNumber').value.trim(),phone:$('resetPhone').value.trim()},null,'student-password-recovery');
   showNotice(result.message||'إذا تطابقت البيانات، سيتلقى القسم طلب الاسترجاع لمراجعته.','success');
   $('passwordResetForm').reset();
  }catch(err){showNotice(err.message||'تعذر إرسال الطلب. تواصل مع القسم.','error')}
@@ -395,7 +395,7 @@ async function loadRegistrationRequests(){
 async function loadPasswordResetRequests(){
  const r=$('staffResults');r.textContent='جارٍ تحميل طلبات استرجاع كلمة المرور…';
  try{
-  const result=await studentAuthRequest({action:'list_reset_requests'},currentSession.access_token);
+  const result=await studentAuthRequest({action:'list_reset_requests'},currentSession.access_token,'student-password-recovery');
   const requests=result.requests||[];
   if(!requests.length){r.textContent='لا توجد طلبات استرجاع معلّقة.';return}
   r.innerHTML='<p class="field-help">تحقق من هوية الطالب مباشرة قبل إصدار كلمة مرور مؤقتة. لن تُرسل كلمة المرور بالبريد أو الرسائل.</p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الجوال</th><th>تاريخ الطلب</th><th>الإجراء</th></tr></thead><tbody>'+requests.map(x=>'<tr><td>'+esc(x.full_name||'—')+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(new Date(x.requested_at).toLocaleString('ar'))+'</td><td><button class="btn" type="button" data-reset-request="'+esc(x.id)+'">إصدار مؤقت بعد التحقق</button></td></tr>').join('')+'</tbody></table></div>';
@@ -403,7 +403,7 @@ async function loadPasswordResetRequests(){
    if(!confirm('هل تحققت من هوية الطالب عبر وسيلة موثوقة؟ لا تصدر كلمة المرور المؤقتة قبل التحقق.'))return;
    button.disabled=true;
    try{
-    const reset=await studentAuthRequest({action:'admin_reset_password',request_id:Number(button.dataset.resetRequest)},currentSession.access_token);
+    const reset=await studentAuthRequest({action:'admin_reset_password',request_id:Number(button.dataset.resetRequest)},currentSession.access_token,'student-password-recovery');
     await loadPasswordResetRequests();
     const out=$('staffResults');
     const card=document.createElement('div');card.className='reset-result';
