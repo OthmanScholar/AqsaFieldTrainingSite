@@ -109,7 +109,7 @@ const $=id=>document.getElementById(id);
 let currentSession=null,currentRole=null,currentStudentSpecialtyName='',currentSupervisorRecords=[];
 const showNotice=(msg,type='')=>{const n=$('notice');n.textContent=msg;n.className='notice show '+type;n.scrollIntoView({behavior:'smooth',block:'nearest'})};
 const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
-function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};if(map[where])$(map[where]).classList.remove('hidden');document.querySelector('.wrap').scrollIntoView({behavior:'smooth',block:'start'});if(where==='portal')renderPortal();}
+function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};const target=map[where]?$(map[where]):null;if(target){target.classList.remove('hidden');target.scrollIntoView({behavior:'smooth',block:'start'});}if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>go('auth')));
 $('headLogin').addEventListener('click',()=>{toggleAuthView('login');go('auth');$('loginIdentifier').focus({preventScroll:true})});
