@@ -28,9 +28,9 @@
 <header class="topbar">
   <a class="brand" href="#home">كلية مجتمع الأقصى | التدريب الميداني</a>
   <nav class="nav">
-    <button data-go="home">الرئيسية</button><button data-go="entities">جهات التدريب</button><button data-go="supervisors">المشرفون</button><button data-go="documents">الكتب والنماذج</button><button data-go="portal">بوابة المستخدم</button><button data-go="contact">تواصل معنا</button>
+    <button data-go="home">الرئيسية</button><button data-go="entities">جهات التدريب</button><button data-go="supervisors">المشرفون</button><button data-go="documents">الكتب والنماذج</button><button data-go="contact">تواصل معنا</button>
   </nav>
-  <div class="topright"><span id="sessionLabel" class="profileline">زائر</span><button id="headLogin" class="btn gold" type="button">دخول رئيس القسم</button><button id="authToggle" class="btn gold">دخول / تسجيل</button></div>
+  <div class="topright"><button id="headLogin" class="btn gold" type="button">دخول رئيس القسم</button></div>
 </header>
 <main id="home">
 <section class="hero">
@@ -112,7 +112,7 @@ const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsP
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};if(map[where])$(map[where]).classList.remove('hidden');document.querySelector('.wrap').scrollIntoView({behavior:'smooth',block:'start'});if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>go('auth')));
-$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
+if($('authToggle'))$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 let entityDirectoryRows=[];
 function renderEntities(){
@@ -296,7 +296,7 @@ $('passwordResetForm').addEventListener('submit',async e=>{
  finally{if(submit)submit.disabled=false}
 });
 async function signOut(){await sb.auth.signOut();await refreshSession();go('home');showNotice('تم تسجيل الخروج.','success')}
-async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSession();currentSession=data.session;currentRole=null;if(currentSession){const {data:r, error:roleError}=await sb.from('user_roles').select('role').eq('user_id',currentSession.user.id).maybeSingle();if(!roleError&&r?.role)currentRole=r.role;$('sessionLabel').textContent=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.university_number||((currentSession.user.email||'').endsWith('@students.aqsa.invalid')?'طالب مسجل':currentSession.user.email)||'مستخدم';$('authToggle').textContent='تسجيل الخروج'}else{$('sessionLabel').textContent='زائر';$('authToggle').textContent='دخول / تسجيل'}if(!$('portalPanel').classList.contains('hidden'))renderPortal()}
+async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSession();currentSession=data.session;currentRole=null;if(currentSession){const {data:r, error:roleError}=await sb.from('user_roles').select('role').eq('user_id',currentSession.user.id).maybeSingle();if(!roleError&&r?.role)currentRole=r.role;if($('sessionLabel'))$('sessionLabel').textContent=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.university_number||((currentSession.user.email||'').endsWith('@students.aqsa.invalid')?'طالب مسجل':currentSession.user.email)||'مستخدم';if($('authToggle'))$('authToggle').textContent='تسجيل الخروج'}else{if($('sessionLabel'))$('sessionLabel').textContent='';if($('authToggle'))$('authToggle').textContent=''}if(!$('portalPanel').classList.contains('hidden'))renderPortal()}
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
 const authMeta=currentSession.user.user_metadata||{};
 if(authMeta.must_change_password){
