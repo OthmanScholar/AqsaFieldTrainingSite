@@ -108,6 +108,22 @@ const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createC
 const $=id=>document.getElementById(id);
 let currentSession=null,currentRole=null,currentStudentSpecialtyName='',currentSupervisorRecords=[];
 const showNotice=(msg,type='')=>{const n=$('notice');n.textContent=msg;n.className='notice show '+type;n.scrollIntoView({behavior:'smooth',block:'nearest'})};
+// ربط نموذج الدخول مبكرًا وإظهار حالة واضحة عند الضغط على زر الدخول.
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const form=$('loginForm'),submit=e.submitter||form.querySelector('button[type="submit"]');
+ const originalText=submit?submit.textContent:'';
+ if(submit){submit.disabled=true;submit.textContent='جارٍ التحقق...'}
+ try{
+  if(!sb)throw new Error('تعذر تحميل خدمة الحسابات. حدّث الصفحة وحاول مجددًا.');
+  showNotice('جارٍ التحقق من بيانات الدخول...','');
+  const result=await studentAuthRequest({action:'login',identifier:$('loginIdentifier').value.trim(),password:$('loginPassword').value});
+  await acceptAuthSession(result);
+  showNotice('تم تسجيل الدخول بنجاح.','success');
+ }catch(err){showNotice(err.message||'تعذر تسجيل الدخول.','error')}
+ finally{if(submit){submit.disabled=false;submit.textContent=originalText}}
+});
+
 const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};const target=map[where]?$(map[where]):null;if(target){target.classList.remove('hidden');target.scrollIntoView({behavior:'smooth',block:'start'});}if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
@@ -274,17 +290,6 @@ $('signupForm').addEventListener('submit',async e=>{
   await acceptAuthSession(result);
   showNotice('تم إنشاء حساب الطالب وتسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر إنشاء الحساب.','error')}
- finally{if(submit)submit.disabled=false}
-});
-$('loginForm').addEventListener('submit',async e=>{
- e.preventDefault();
- if(!sb){showNotice('تعذر الاتصال بخدمة الحسابات.','error');return}
- const submit=e.submitter;if(submit)submit.disabled=true;
- try{
-  const result=await studentAuthRequest({action:'login',identifier:$('loginIdentifier').value.trim(),password:$('loginPassword').value});
-  await acceptAuthSession(result);
-  showNotice('تم تسجيل الدخول بنجاح.','success');
- }catch(err){showNotice(err.message||'تعذر تسجيل الدخول.','error')}
  finally{if(submit)submit.disabled=false}
 });
 $('passwordResetForm').addEventListener('submit',async e=>{
