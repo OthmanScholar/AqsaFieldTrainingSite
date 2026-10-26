@@ -126,14 +126,13 @@ function renderEntities(){
 }
 async function loadEntities(){
  if(!sb){$('entitiesList').textContent='خدمة Supabase غير متاحة.';return}
- const {data,error}=await sb.from('public_training_entities').select('id,name,entity_type,governorate,registration_url,specialty').order('name');
- if(error){$('entitiesList').textContent='تعذر تحميل الجهات. تأكد من إعداد قاعدة البيانات وصلاحية العرض العام.';return}
- entityDirectoryRows=(data||[]).map(x=>({...x,specialty:x.specialty||''}));
- const specialties=[...new Set(entityDirectoryRows.map(x=>x.specialty).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+ const {data,error}=await sb.from('training_entities').select('id,name,entity_type,governorate,registration_url,is_approved,is_active').eq('is_approved',true).eq('is_active',true).order('name');
+ if(error){$('entitiesList').textContent='تعذر تحميل الجهات المعتمدة. تأكد من إعداد قاعدة البيانات وصلاحية القراءة.';return}
+ entityDirectoryRows=(data||[]).map(x=>({...x,specialty:''}));
  const areas=[...new Set(entityDirectoryRows.map(x=>x.governorate).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
- $('entitySpecialtyFilter').innerHTML='<option value="">كل التخصصات</option>'+specialties.map(x=>'<option>'+esc(x)+'</option>').join('');
+ $('entitySpecialtyFilter').innerHTML='<option value="">كل التخصصات</option>';
  $('entityAreaFilter').innerHTML='<option value="">كل المناطق</option>'+areas.map(x=>'<option>'+esc(x)+'</option>').join('');
- ['entitySearch','entitySpecialtyFilter','entityAreaFilter'].forEach(id=>$(id).addEventListener(id==='entitySearch'?'input':'change',renderEntities));
+ ['entitySearch','entityAreaFilter'].forEach(id=>$(id).addEventListener(id==='entitySearch'?'input':'change',renderEntities));
  renderEntities();
 }
 const supervisorSeed=[
@@ -156,12 +155,12 @@ const supervisorSeed=[
  {"name":"د. أحمد دوابة","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"}
 ];
 async function loadSupervisors(){
- if(!sb){currentSupervisorRecords=[];renderSupervisorRows(supervisorSeed);updateSignupSupervisorOptions();return}
+ if(!sb){currentSupervisorRecords=[];renderSupervisorRows([]);updateSignupSupervisorOptions();return}
  const {data:{session}}=await sb.auth.getSession();
  const columns=session?.user?'id,name,region,category,specialty,is_active,phone':'id,name,region,category,specialty,is_active';
  const {data,error}=await sb.from('public_supervisors').select(columns).eq('is_active',true).order('name');
  currentSupervisorRecords=!error&&Array.isArray(data)?data.filter(x=>x.is_active!==false):[];
- renderSupervisorRows(currentSupervisorRecords.length?currentSupervisorRecords:supervisorSeed);
+ renderSupervisorRows(currentSupervisorRecords);
  updateSignupSupervisorOptions();
 }
 function normalizeArabicMatch(value){
@@ -223,7 +222,9 @@ function updateSignupSupervisorOptions(){
 
 function renderSupervisorRows(rows){
  const list=[...(rows||[])];
- $('supervisorsList').innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>التخصص</th><th>المنطقة / مكان الإشراف</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+
+ const target=$('supervisorsList');if(!target)return;
+ if(!list.length){target.innerHTML='<p class="muted">تعذر تحميل قائمة المشرفين المعتمدة حاليًا. لن تظهر أسماء احتياطية؛ يرجى المحاولة لاحقًا أو التواصل مع القسم.</p>';return}
+ target.innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>التخصص</th><th>المنطقة / مكان الإشراف</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+
  list.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.role||'مشرف التدريب الميداني')+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.region)+'</td><td>'+esc(x.category)+'</td><td>'+(x.phone?'<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>':'—')+'</td></tr>').join('')+
  '</tbody></table></div>';
 }
@@ -315,12 +316,17 @@ await fillEntitySelect();await fillPreferenceOptions();await loadStudentPreferen
 }else if(['admin','department_head','supervisor'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadVisits">تقارير الزيارات</button><button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button>${currentRole==='admin'||currentRole==='department_head'?'<button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button>':''}</div><div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadVisits').onclick=loadVisits;$('loadEvidence').onclick=loadEvidence;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;
 }else{c.innerHTML=`<p>الحساب مسجل الدخول لكن لم يتم تفعيل دور وظيفي له. تواصل مع الإدارة لتعيين الدور الصحيح.</p>`}
 }
-async function fillEntitySelect(){const {data,error}=await sb.from('public_training_entities').select('id,name').order('name');const el=$('requestEntity');if(!el)return;el.innerHTML='<option value="">اختر جهة معتمدة</option>'+(!error?(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'')}
+async function fillEntitySelect(){
+ const el=$('requestEntity');if(!el||!sb)return;
+ const {data,error}=await sb.from('training_entities').select('id,name').eq('is_approved',true).eq('is_active',true).order('name');
+ el.innerHTML='<option value="">اختر جهة معتمدة</option>'+(!error?(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'');
+ if(error)showNotice('تعذر تحميل الجهات المعتمدة. حاول لاحقًا أو تواصل مع القسم.','error');
+}
 async function fillPreferenceOptions(){
- const {data:entities}=await sb.from('public_training_entities').select('id,name').order('name');
- const entityEl=$('prefEntity'); if(entityEl) entityEl.innerHTML='<option value="">اقترح جهة جديدة / لا يوجد</option>'+(entities||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
- const supervisors=[...supervisorSeed.map(x=>x.name), 'د. عثمان محمد العثماني','د. علاء عيد'];
- const unique=[...new Set(supervisors)]; const supEl=$('prefSupervisor'); if(supEl) supEl.innerHTML='<option value="">لا يوجد تفضيل</option>'+unique.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ const {data:entities,error}=await sb.from('training_entities').select('id,name').eq('is_approved',true).eq('is_active',true).order('name');
+ const entityEl=$('prefEntity'); if(entityEl) entityEl.innerHTML='<option value="">اختر جهة معتمدة أو اقترح جهة جديدة أدناه</option>'+(!error?(entities||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''):'');
+ const {data:supervisors}=await sb.from('public_supervisors').select('name').eq('is_active',true).order('name');
+ const unique=[...new Set((supervisors||[]).map(x=>x.name).filter(Boolean))]; const supEl=$('prefSupervisor'); if(supEl) supEl.innerHTML='<option value="">لا يوجد تفضيل</option>'+unique.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
 }
 async function loadStudentPreference(){
  const {data,error}=await sb.from('student_training_preferences').select('*').eq('student_user_id',currentSession.user.id).maybeSingle();
