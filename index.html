@@ -399,7 +399,20 @@ async function loadAssigned(){
  const entities=new Map((er.data||[]).map(x=>[String(x.id),x.name]));
  r.innerHTML='<p><strong>إجمالي الطلاب المسندين: '+assignments.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>#</th><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>المنطقة</th></tr></thead><tbody>'+assignments.map((x,i)=>{const p=profiles.get(x.student_user_id)||{};return `<tr><td>${i+1}</td><td>${esc(p.full_name||'بيانات الاسم غير متاحة')}</td><td>${esc(p.university_number||'—')}</td><td>${esc(specialties.get(String(x.specialty_id))||'غير محدد')}</td><td>${esc(entities.get(String(x.training_entity_id))||'غير محددة')}</td><td>${esc(p.student_area||'—')}</td></tr>`}).join('')+'</tbody></table></div>';
 }
-async function loadVisits(){const r=$('staffResults');let q=sb.from('training_visits').select('id,student_user_id,supervisor_user_id,visit_date,visit_type,visit_notes,created_at').order('visit_date',{ascending:false}).limit(200);if(currentRole==='supervisor')q=q.eq('supervisor_user_id',currentSession.user.id);const {data,error}=await q;if(error){r.textContent='تعذر تحميل الزيارات: '+error.message+' — راجع مخطط قاعدة البيانات وسياسات الصلاحيات.';return}r.innerHTML='<div class="tablewrap"><table><thead><tr><th>معرّف الطالب</th><th>التاريخ</th><th>نوع الزيارة</th><th>ملاحظات</th></tr></thead><tbody>'+(data||[]).map(x=>`<tr><td>${esc(x.student_user_id)}</td><td>${esc(x.visit_date||'—')}</td><td>${esc(x.visit_type||'—')}</td><td>${esc(x.visit_notes||'—')}</td></tr>`).join('')+'</tbody></table></div>'}
+async function loadVisits(){
+ const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل تقارير الزيارات...</p>';
+ let q=sb.from('training_visits').select('id,student_user_id,supervisor_user_id,visit_date,visit_type,visit_notes,created_at').order('visit_date',{ascending:false}).limit(200);
+ if(currentRole==='supervisor')q=q.eq('supervisor_user_id',currentSession.user.id);
+ const {data,error}=await q;
+ if(error){r.textContent='تعذر تحميل الزيارات: '+error.message+' — راجع مخطط قاعدة البيانات وسياسات الصلاحيات.';return}
+ const visits=data||[];
+ if(!visits.length){r.innerHTML='<p class="muted">لا توجد تقارير زيارات مسجلة حتى الآن.</p>';return}
+ const ids=[...new Set(visits.map(x=>x.student_user_id).filter(Boolean))];
+ const pr=ids.length?await sb.from('student_profiles').select('user_id,full_name,university_number').in('user_id',ids):{data:[],error:null};
+ if(pr.error){r.textContent='تعذر تحميل أسماء الطلاب: '+pr.error.message;return}
+ const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
+ r.innerHTML='<p><strong>عدد تقارير الزيارات المعروضة: '+visits.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>تاريخ الزيارة</th><th>نوع الزيارة</th><th>ملاحظات</th></tr></thead><tbody>'+visits.map(x=>{const p=profiles.get(x.student_user_id)||{};return `<tr><td>${esc(p.full_name||'بيانات الاسم غير متاحة')}</td><td>${esc(p.university_number||'—')}</td><td>${esc(x.visit_date||'—')}</td><td>${esc(x.visit_type||'—')}</td><td>${esc(x.visit_notes||'—')}</td></tr>`}).join('')+'</tbody></table></div>';
+}
 async function loadWorkloadReport(){
  const r=$('staffResults');
  r.innerHTML='<div class="card"><h3>كشف أعباء المشرفين والزيارات</h3><p class="muted">أدخل رمز الفصل الدراسي كما تعتمده الكلية، مثال: 2026-1. لكل طالب أربع زيارات مقررة.</p><div class="form-grid"><label>الفصل الدراسي<input id="workloadSemester" required maxlength="40" placeholder="مثال: 2026-1"></label></div><button class="btn" id="loadWorkloadData">عرض الكشف</button><div id="workloadData"></div></div>';
