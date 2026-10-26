@@ -107,6 +107,7 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_O28XTWBruit3W6Q8O1VOTA_3hEZJK2E';
 const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 const $=id=>document.getElementById(id);
 let currentSession=null,currentRole=null,currentStudentSpecialtyName='',currentSupervisorRecords=[];
+let authLoginMode='general';
 const showNotice=(msg,type='')=>{const n=$('notice');n.textContent=msg;n.className='notice show '+type;n.scrollIntoView({behavior:'smooth',block:'nearest'})};
 // ربط نموذج الدخول مبكرًا وإظهار حالة واضحة عند الضغط على زر الدخول.
 $('loginForm').addEventListener('submit',async e=>{
@@ -117,7 +118,7 @@ $('loginForm').addEventListener('submit',async e=>{
  try{
   if(!sb)throw new Error('تعذر تحميل خدمة الحسابات. حدّث الصفحة وحاول مجددًا.');
   showNotice('جارٍ التحقق من بيانات الدخول...','');
-  const result=await studentAuthRequest({action:'login',identifier:$('loginIdentifier').value.trim(),password:$('loginPassword').value});
+  const result=await studentAuthRequest({action:'login',identifier:$('loginIdentifier').value.trim(),password:$('loginPassword').value},undefined,authLoginMode==='department_head'?'department-head-auth':'student-auth');
   await acceptAuthSession(result);
   showNotice('تم تسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر تسجيل الدخول.','error')}
@@ -127,8 +128,8 @@ $('loginForm').addEventListener('submit',async e=>{
 const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};const target=map[where]?$(map[where]):null;if(target){target.classList.remove('hidden');target.scrollIntoView({behavior:'smooth',block:'start'});}if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>go('auth')));
-$('headLogin').addEventListener('click',()=>{toggleAuthView('login');go('auth');$('loginIdentifier').focus({preventScroll:true})});
+document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>{authLoginMode='general';$('loginView').querySelector('h3').textContent='تسجيل الدخول';$('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth')}));
+$('headLogin').addEventListener('click',()=>{authLoginMode='department_head';toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول رئيس القسم';$('loginIdentifier').placeholder='البريد الوظيفي لرئيس القسم';go('auth');$('loginIdentifier').focus({preventScroll:true})});
 if($('authToggle'))$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 let entityDirectoryRows=[];
@@ -260,12 +261,12 @@ $('toggleLoginPassword').addEventListener('click',()=>{const p=$('loginPassword'
 $('toggleSignupPassword').addEventListener('click',()=>{const p=$('signupPassword');p.type=p.type==='password'?'text':'password';$('toggleSignupPassword').textContent=p.type==='password'?'إظهار':'إخفاء'});
 ['signupArea','specialty','universityNumber'].forEach(id=>$(id).addEventListener('change',updateSignupSupervisorOptions));
 $('universityNumber').addEventListener('input',updateSignupSupervisorOptions);
-async function studentAuthRequest(payload,accessToken){
+async function studentAuthRequest(payload,accessToken,functionName='student-auth'){
  const headers={apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'};
  if(accessToken)headers.Authorization='Bearer '+accessToken;
  let response;
- try{response=await fetch(SUPABASE_URL+'/functions/v1/student-auth',{method:'POST',headers,body:JSON.stringify(payload)});}
- catch(e){throw new Error('تعذر الاتصال بخدمة الحسابات. تأكد من نشر وظيفة student-auth في Supabase.');}
+ try{response=await fetch(SUPABASE_URL+'/functions/v1/'+functionName,{method:'POST',headers,body:JSON.stringify(payload)});}
+ catch(e){throw new Error('تعذر الاتصال بوظيفة '+functionName+'. تأكد من نشرها في Supabase ومن إعدادات الاتصال.');}
  let data={};try{data=await response.json()}catch{}
  if(!response.ok||data.error)throw new Error(data.error||'تعذر إكمال العملية. راجع إعداد خدمة الحسابات.');
  return data;
