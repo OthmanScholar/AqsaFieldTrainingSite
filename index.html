@@ -112,6 +112,7 @@ const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsP
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};if(map[where])$(map[where]).classList.remove('hidden');document.querySelector('.wrap').scrollIntoView({behavior:'smooth',block:'start'});if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>go('auth')));
+$('headLogin').addEventListener('click',()=>{toggleAuthView('login');go('auth');$('loginIdentifier').focus({preventScroll:true})});
 if($('authToggle'))$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 let entityDirectoryRows=[];
@@ -409,7 +410,7 @@ async function loadPasswordResetRequests(){
   });
  }catch(err){r.textContent=err.message||'تعذر تحميل طلبات الاسترجاع.'}
 }
-async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();$('headLogin').addEventListener('click',()=>go('auth'));sb.auth.onAuthStateChange(()=>refreshSession())}
+async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();sb.auth.onAuthStateChange(()=>refreshSession())}
 init();
 </script>
 </body></html>
