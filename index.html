@@ -22,6 +22,24 @@
 .reset-result{margin:12px 0;padding:14px;border:1px solid var(--gold);background:#fffaf0;border-radius:12px}
 .reset-result code{display:inline-block;direction:ltr;user-select:all;font-size:1.1rem;font-weight:900;padding:8px;background:#fff;border:1px solid var(--line);border-radius:7px}
 
+
+/* Unified homepage hub: one continuous panel instead of separate cards */
+.home-hub{background:linear-gradient(135deg,var(--wine),var(--dark));color:#fff;border:1px solid #d8b46a;border-radius:24px;padding:clamp(20px,3vw,36px);box-shadow:0 18px 44px #4615222b;margin-top:28px;margin-bottom:30px}
+.home-hub .hub-heading{text-align:center;color:var(--gold);margin:0 0 10px;font-size:clamp(1.25rem,2.5vw,1.8rem)}
+.home-hub .team-profiles{margin:18px auto 24px;gap:18px}
+.home-hub .team-profile{background:transparent;border:0;border-radius:0;box-shadow:none;padding:12px 16px;color:#fff}
+.home-hub .team-profile h3{color:var(--gold)}
+.home-hub .team-profile p,.home-hub .team-profile a{color:#fff}
+.home-hub .team-profile img{border-color:var(--gold);background:#fff}
+.home-hub .hub-options{margin:0;gap:0;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #ffffff45;padding-top:18px}
+.home-hub .hub-options .card{background:transparent;border:0;border-radius:0;box-shadow:none;color:#fff;min-height:unset;padding:14px 20px;align-items:center;text-align:center;transform:none}
+.home-hub .hub-options .card:not(:last-child){border-inline-end:1px solid #ffffff35}
+.home-hub .hub-options .card h3{color:var(--gold);margin-top:7px}
+.home-hub .hub-options .card p{color:#fff;opacity:.9}
+.home-hub .hub-options .card .btn{background:var(--gold);color:var(--dark);margin-top:10px}
+.home-hub .hub-options .card .btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+@media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}.home-hub .hub-options .card:nth-child(2){border-inline-end:0}}
+@media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:4px}.home-hub .team-profile{padding:10px 4px}.home-hub .team-profile img{width:82px;height:82px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:8px}.home-hub .hub-options .card{padding:18px 8px;border-inline-end:0!important;border-bottom:1px solid #ffffff35}.home-hub .hub-options .card:last-child{border-bottom:0}}
 </style>
 </head>
 <body>
@@ -36,18 +54,17 @@
 <section class="hero">
  <div><img class="logo" src="college-logo.png.jpeg" alt="شعار كلية مجتمع الأقصى"><div class="pill">كلية مجتمع الأقصى للدراسات المتوسطة</div><h1>نظام إدارة التدريب الميداني</h1><div class="slogan">من التعلم إلى الواقع ... نحو مستقبل مهني متميز</div></div>
 </section>
-<section class="wrap">
- <h2 style="text-align:center;color:var(--wine);margin:18px 0 8px">إشراف ومتابعة التدريب الميداني</h2>
+<section class="wrap home-hub">
+ <h2 class="hub-heading">إشراف ومتابعة التدريب الميداني</h2>
  <div class="team-profiles">
   <article class="team-profile"><img src="dr-othman.jpg.jpg" alt="د. عثمان محمد العثماني" loading="lazy"><div><h3>د. عثمان محمد العثماني</h3><p>مساعد رئيس قسم التدريب الميداني — العلوم التربوية</p><p><a href="tel:0598983625">0598983625</a></p></div></article>
   <article class="team-profile"><img src="dr-alaa.jpg.jpeg" alt="د. علاء عيد" loading="lazy"><div><h3>د. علاء عيد</h3><p>رئيس قسم التدريب الميداني</p><p><a href="tel:0593418641">0593418641</a></p></div></article>
  </div>
-</section>
-<section class="wrap cards">
- <article class="card"><div class="emoji">🎓</div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
- 
- <article class="card"><div class="emoji">🧑‍🏫</div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
- <article class="card"><div class="emoji">📄</div><h3>نماذج الطلاب</h3><p>نماذج التدريب المعتمدة للعرض والتحميل فقط.</p><button class="btn" data-go="documents">عرض النماذج</button></article>
+ <div class="cards hub-options">
+  <article class="card"><div class="emoji">🎓</div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
+  <article class="card"><div class="emoji">🧑‍🏫</div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
+  <article class="card"><div class="emoji">📄</div><h3>نماذج الطلاب</h3><p>نماذج التدريب المعتمدة للعرض والتحميل فقط.</p><button class="btn" data-go="documents">عرض النماذج</button></article>
+ </div>
 </section>
 <div class="wrap">
  <div id="notice" class="notice" role="status" aria-live="polite"></div>
