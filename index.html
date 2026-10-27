@@ -135,8 +135,19 @@ $('loginForm').addEventListener('submit',async e=>{
  try{
   if(!sb)throw new Error('تعذر تحميل خدمة الحسابات. حدّث الصفحة وحاول مجددًا.');
   showNotice('جارٍ التحقق من بيانات الدخول...','');
-  const result=await studentAuthRequest({action:'login',identifier:$('loginIdentifier').value.trim(),password:$('loginPassword').value},undefined,authLoginMode==='department_head'?'department-head-auth':'student-auth');
-  await acceptAuthSession(result);
+const result = await studentAuthRequest(
+  {
+    action: 'login',
+    identifier: $('loginIdentifier').value.trim(),
+    password: $('loginPassword').value
+  },
+  undefined,
+  authLoginMode === 'department_head'
+    ? 'department-head-auth'
+    : authLoginMode === 'supervisor'
+      ? 'supervisor-auth'
+      : 'student-auth'
+);  await acceptAuthSession(result);
   showNotice('تم تسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر تسجيل الدخول.','error')}
  finally{if(submit){submit.disabled=false;submit.textContent=originalText}}
@@ -538,7 +549,8 @@ async function loadRegistrationRequests(){
   const status=b.dataset.status;
   let note=null;
   if(status==='rejected'||status==='exception_approved'){note=prompt(status==='rejected'?'اكتب سبب رفض الطلب:':'اكتب مبرر الاستثناء (إلزامي):');if(note===null)return;if(!note.trim()){showNotice('يجب كتابة ملاحظة توضح القرار.','error');return}}
-  if(!confirm('تأكيد قرار '+(status==='approved'?'اعتماد':status==='rejected'?'رفض':'استثناء مسبب')+' الطلب؟'))return;
+ 
+   if(!confirm('تأكيد قرار '+(status==='approved'?'اعتماد':status==='rejected'?'رفض':'استثناء مسبب')+' الطلب؟'))return;
   b.disabled=true;
   const {error}=await sb.rpc('decide_training_registration',{p_request_id:Number(b.dataset.registration),p_status:status,p_note:note});
   if(error){showNotice('تعذر حفظ القرار: '+error.message,'error');b.disabled=false;return}
