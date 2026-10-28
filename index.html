@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--wine:#245b91;--dark:#12365d;--gold:#d8b46a;--gold2:#b18a42;--ivory:#f6f9fd;--ink:#1e293b;--muted:#64748b;--line:#dbe5f0;--shadow:0 16px 38px #12365d20}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--ivory);color:var(--ink);font-family:Cairo,Tahoma,Arial,sans-serif}button,input,select,textarea{font:inherit}button,a{cursor:pointer}a{text-decoration:none;color:inherit}.topbar{background:linear-gradient(100deg,var(--dark),var(--wine),#3478b8);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px clamp(16px,4vw,60px);gap:18px;flex-wrap:wrap}.brand{font-weight:900}.nav{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.nav button{border:0;background:transparent;color:#fff;font-weight:800;padding:8px}.nav button:hover{color:var(--gold)}.btn{border:0;border-radius:11px;padding:10px 16px;font-weight:900;background:var(--wine);color:#fff}.btn.gold{background:var(--gold);color:var(--dark)}.btn.ghost{background:#f4e9df;color:var(--wine)}.btn:disabled{opacity:.55;cursor:not-allowed}.hero{min-height:380px;display:grid;place-items:center;text-align:center;padding:40px 16px;background:linear-gradient(180deg,#fbf8f5d9,#fbf8f5e8),url('https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=2000&q=80') center/cover}.logo{width:84px;height:84px;object-fit:contain;border-radius:50%;background:white;padding:5px;border:2px solid var(--gold)}.pill{display:inline-block;background:var(--wine);color:#f8df9b;border:2px solid var(--gold);border-radius:15px;padding:8px 24px;font-weight:900;margin-top:10px}.hero h1{font-size:clamp(2rem,4vw,3.3rem);color:var(--wine);margin:8px 0}.slogan{font-weight:900;background:#f1d58e;display:inline-block;padding:8px 16px;border-radius:10px}.wrap{width:min(1200px,94%);margin:24px auto}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:-24px;position:relative;align-items:stretch}.card,.panel{background:white;border:1px solid #e3ebf5;border-radius:18px;padding:20px;box-shadow:var(--shadow);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.cards .card{min-height:184px;padding:17px;display:flex;flex-direction:column;align-items:flex-start;position:relative;overflow:hidden}.cards .card p{flex:1}.cards .card:hover{transform:translateY(-4px);box-shadow:0 20px 42px #12365d24;border-color:#dfc6a0}.card h3{color:var(--wine);margin:4px 0}.card p{line-height:1.8;color:var(--muted);font-size:.94rem}.card .btn{margin-top:8px;transition:filter .2s ease,transform .2s ease}.card .btn:hover{filter:brightness(1.07);transform:translateY(-1px)}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #d8b46a;outline-offset:3px}.card .emoji{font-size:1.8rem}.panel{margin:18px auto}.panel h2{margin:0 0 12px;color:var(--wine)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;margin:9px 0}.field label{font-weight:800;font-size:.92rem}.field input,.field select,.field textarea{width:100%;border:1px solid #d9c8cc;border-radius:10px;padding:10px;background:#fff;color:var(--ink)}.field textarea{min-height:95px;resize:vertical}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.muted{color:var(--muted)}.notice{display:none;margin:12px 0;padding:12px;border-radius:10px;background:#fff4d9;color:#694b12;white-space:pre-wrap}.notice.show{display:block}.notice.error{background:#fde8e8;color:#8a1e2d}.notice.success{background:#e8f7ed;color:#14532d}.hidden{display:none!important}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px;background:#fff}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}th{background:#f7edf0;color:var(--wine)}.status{display:inline-block;padding:3px 9px;border-radius:20px;background:#f5e7bc;font-size:.82rem;font-weight:800}.small{font-size:.85rem}.service-buttons{display:flex;gap:8px;flex-wrap:wrap}.service-buttons button{flex:1;min-width:130px}.footer{background:var(--dark);color:#f5e4bd;text-align:center;padding:16px;margin-top:35px;border-top:5px solid var(--gold)}.profileline{font-weight:800;color:#fff}.topright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.team-profiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:24px auto}.team-profile{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e3ebf5;border-radius:18px;padding:16px;box-shadow:var(--shadow)}.team-profile img{width:104px;height:104px;object-fit:cover;border-radius:50%;border:3px solid var(--gold);background:#f7edf0}.team-profile h3{margin:0 0 5px;color:var(--wine)}.team-profile p{margin:3px 0;color:var(--muted)}@media(max-width:520px){.team-profiles{grid-template-columns:1fr}.team-profile img{width:82px;height:82px}}
@@ -349,9 +350,82 @@ if(authMeta.must_change_password){
 }
 if(currentRole==='student'){const {data:p}=await sb.from('student_profiles').select('full_name,university_number,eligibility_status,completed_hours,specialty_id,student_area,supervisor_name,supervisor_phone').eq('user_id',currentSession.user.id).maybeSingle();currentStudentSpecialtyName='';if(p?.specialty_id){const {data:sp}=await sb.from('specialties').select('name').eq('id',p.specialty_id).maybeSingle();currentStudentSpecialtyName=sp?.name||'';}const {data:req}=await sb.from('training_registration_requests').select('id,request_status,department_note,created_at').eq('student_user_id',currentSession.user.id).order('created_at',{ascending:false});c.innerHTML=`<p>أهلًا ${esc(p?.full_name||currentSession.user.email)}</p><p>رقم الطالب: ${esc(p?.university_number||'—')} · الساعات المعتمدة: ${esc(p?.completed_hours??'قيد المراجعة')} · الأهلية: <span class="status">${esc(p?.eligibility_status||'pending')}</span></p><p>منطقة الطالب: <strong>${esc(p?.student_area||'لم تُحدد بعد')}</strong> · المشرف المكلف: <strong>${esc(p?.supervisor_name||'لم يُعتمد بعد')}</strong></p><h3>بيانات جهة التدريب</h3><p class="muted small">المشرف المعروض هو المشرف المكلف في ملف الطالب. بيانات المؤسسة في النموذج التالي تخص جهة التدريب، ولا تغيّر إسناد المشرف.</p><form id="preferenceForm"><div class="grid2"><div class="field"><label>منطقة التدريب</label><select id="studentArea" required><option value="">اختر المنطقة</option><option value="شمال غزة">شمال غزة</option><option value="غزة">غزة</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div><div class="field"><label>نوع التدريب</label><select id="prefTrainingType" required><option value="institution">تدريب داخل مؤسسة</option><option value="activity">تدريب قائم على الأنشطة</option></select></div><div class="field"><label>جهة تدريب معتمدة (إن وجدت)</label><select id="prefEntity"><option value="">اختر جهة أو اقترح جهة جديدة</option></select></div><div class="field"><label>اسم المؤسسة المقترحة</label><input id="prefEntityName" placeholder="إذا لم تكن موجودة في القائمة"></div><div class="field"><label>موقع المؤسسة / المنطقة</label><input id="prefEntityLocation" placeholder="المحافظة، المنطقة، العنوان"></div></div><button class="btn gold" type="submit">حفظ بيانات التدريب المقترحة</button></form><h3>طلب التدريب الرسمي</h3><form id="requestForm"><div class="field"><label>جهة التدريب المعتمدة</label><select id="requestEntity"><option value="">اختر جهة معتمدة</option></select></div><button class="btn" type="submit">إرسال طلب التدريب الرسمي</button></form><h3>طلباتك</h3>${req?.length?'<div class="tablewrap"><table><thead><tr><th>رقم</th><th>الحالة</th><th>ملاحظة القسم</th></tr></thead><tbody>'+req.map(x=>`<tr><td>${x.id}</td><td>${esc(x.request_status)}</td><td>${esc(x.department_note||'—')}</td></tr>`).join('')+'</tbody></table></div>':'<p class="muted">لا توجد طلبات حتى الآن.</p>'}<h3>إثبات الساعات</h3><form id="evidenceForm"><div class="field"><label>عدد الساعات المنجزة</label><input type="number" id="claimedHours" min="0" required></div><div class="field"><label>صورة إثبات الساعات</label><input type="file" id="evidenceFile" accept="image/*,.pdf" required></div><button class="btn gold" type="submit">رفع الإثبات</button></form>`;
 await fillEntitySelect();await fillPreferenceOptions();await loadStudentPreference();$('requestForm').onsubmit=submitRequest;$('evidenceForm').onsubmit=submitEvidence;$('preferenceForm').onsubmit=saveStudentPreference;
-}else if(['admin','department_head','supervisor'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadVisits">تقارير الزيارات</button><button class="btn" id="loadWorkload">كشف أعباء المشرفين</button><button class="btn gold" id="openSupervisorForms">نماذج التقييم حسب التخصص</button><button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button>${currentRole==='admin'||currentRole==='department_head'?'<button class="btn" id="loadRegistrationRequests">مراجعة طلبات التدريب</button><button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button>':''}</div><div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadVisits').onclick=loadVisits;$('loadWorkload').onclick=loadWorkloadReport;$('openSupervisorForms').onclick=loadSupervisorForms;$('loadEvidence').onclick=loadEvidence;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;if($('loadRegistrationRequests'))$('loadRegistrationRequests').onclick=loadRegistrationRequests;
+}else if(['admin','department_head','supervisor'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadVisits">تقارير الزيارات</button><button class="btn" id="loadWorkload">كشف أعباء المشرفين</button><button class="btn gold" id="openSupervisorForms">نماذج التقييم حسب التخصص</button><button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button>${currentRole==='admin'||currentRole==='department_head'?'<button class="btn" id="loadRegistrationRequests">مراجعة طلبات التدريب</button><button class="btn gold" id="rosterImportBtn">استيراد كشف الطلاب (Excel)</button><button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button>':''}</div><div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadVisits').onclick=loadVisits;$('loadWorkload').onclick=loadWorkloadReport;$('openSupervisorForms').onclick=loadSupervisorForms;$('loadEvidence').onclick=loadEvidence;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;if($('loadRegistrationRequests'))$('loadRegistrationRequests').onclick=loadRegistrationRequests;if($('rosterImportBtn'))$('rosterImportBtn').onclick=renderRosterImporter;
 }else{c.innerHTML=`<p>الحساب مسجل الدخول لكن لم يتم تفعيل دور وظيفي له. تواصل مع الإدارة لتعيين الدور الصحيح.</p>`}
 }
+
+function renderRosterImporter(){
+ const r=$('staffResults');
+ r.innerHTML='<div class="card"><h3>استيراد كشف الطلاب المؤهلين</h3><p class="muted">ارفع ملف Excel (.xlsx) أو CSV. سيُفحص الكشف أولًا؛ لن تُكتب أي بيانات إلا بعد الضغط على زر الاستيراد. هذه الخطوة تحفظ الكشف الإداري في eligible_student_roster ولا تنشئ حسابات للطلاب.</p><div class="field"><label for="rosterFile">ملف كشف الطلاب</label><input id="rosterFile" type="file" accept=".xlsx,.xls,.csv" required></div><button class="btn" id="rosterPreviewBtn" type="button">فحص الملف وعرض المعاينة</button><div id="rosterPreview"></div></div>';
+ $('rosterPreviewBtn').onclick=previewRosterFile;
+}
+function rosterHeaderKey(v){
+ return String(v??'').trim().toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[\s_\-\/]+/g,'');
+}
+async function previewRosterFile(){
+ const file=$('rosterFile')?.files?.[0],out=$('rosterPreview');
+ if(!file){showNotice('اختر ملف كشف الطلاب أولًا.','error');return}
+ if(!window.XLSX){showNotice('تعذر تحميل قارئ Excel. حدّث الصفحة أو استخدم CSV.','error');return}
+ try{
+  const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+  if(!raw.length)throw new Error('الملف فارغ أو لا يحتوي صفوف بيانات.');
+  const {data:specs,error}=await sb.from('specialties').select('id,name').eq('is_active',true);
+  if(error)throw error;
+  const specMap=new Map((specs||[]).map(x=>[rosterHeaderKey(x.name),x.id]));
+  const fieldMap={
+   number:['الرقم الجامعي','رقم الطالب','university_number','studentnumber','universitynumber'],
+   name:['اسم الطالب','الاسم الرباعي','اسم الطالبة','الاسم','full_name','fullname','studentname'],
+   gender:['الجنس','النوع','gender'],
+   specialty:['التخصص','اسم التخصص','specialty','specialtyname'],
+   notes:['ملاحظات','notes']
+  };
+  const headers=Object.keys(raw[0]);
+  const mapped={};
+  for(const k of Object.keys(fieldMap))mapped[k]=headers.find(h=>fieldMap[k].map(rosterHeaderKey).includes(rosterHeaderKey(h)));
+  if(!mapped.number||!mapped.name||!mapped.gender||!mapped.specialty)throw new Error('الأعمدة المطلوبة: الرقم الجامعي، اسم الطالب، الجنس، التخصص. يمكن أن تكون بالعربية أو الإنجليزية.');
+  const seen=new Set(),rows=[],issues=[];
+  raw.forEach((o,i)=>{
+   const line=i+2,number=String(o[mapped.number]??'').trim().replace(/\s/g,''),name=String(o[mapped.name]??'').trim();
+   const g0=rosterHeaderKey(o[mapped.gender]),gender=(['ذكر','طالب','طلاب','male','m','1'].includes(g0)?'male':['انثى','أنثى','طالبه','طالبات','female','f','2'].includes(g0)?'female':'');
+   const specName=String(o[mapped.specialty]??'').trim(),specialtyId=specMap.get(rosterHeaderKey(specName));
+   const rowIssues=[];
+   if(!/^\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
+   if(number&&seen.has(number))rowIssues.push('رقم مكرر داخل الملف');seen.add(number);
+   if(!name)rowIssues.push('الاسم فارغ');
+   if(!gender)rowIssues.push('الجنس يجب أن يكون ذكر/أنثى أو male/female');
+   if(gender==='male'&&!number.startsWith('122'))rowIssues.push('رقم الطالب الذكر يجب أن يبدأ 122');
+   if(gender==='female'&&!number.startsWith('222'))rowIssues.push('رقم الطالبة يجب أن يبدأ 222');
+   if(!specialtyId)rowIssues.push('التخصص غير مطابق لقائمة النظام');
+   if(rowIssues.length)issues.push({line,number,name,issues:rowIssues});
+   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,notes:mapped.notes?String(o[mapped.notes]??'').trim()||null:null,imported_by:currentSession.user.id,_line:line,_issues:rowIssues});
+  });
+  window.__rosterImportRows=rows;
+  const valid=rows.filter(x=>!x._issues.length);
+  out.innerHTML='<p><strong>عدد الصفوف:</strong> '+rows.length+' — <strong>صالحة:</strong> '+valid.length+' — <strong>تحتاج تصحيحًا:</strong> '+issues.length+'</p>'+
+   (issues.length?'<div class="tablewrap"><table><thead><tr><th>صف Excel</th><th>الرقم</th><th>الاسم</th><th>المشكلات</th></tr></thead><tbody>'+issues.slice(0,100).map(x=>'<tr><td>'+x.line+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.issues.join('، '))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="notice show success">اجتاز الكشف الفحص الأولي.</p>')+
+   '<p class="muted small">المعاينة لا تحفظ شيئًا. ستُحدّث الأرقام الموجودة مسبقًا عند الاستيراد؛ تأكد من الملف قبل المتابعة.</p>'+
+   '<button class="btn gold" id="confirmRosterImport" type="button" '+(valid.length&&!issues.length?'':'disabled')+'>استيراد '+valid.length+' طالب إلى قاعدة البيانات</button>';
+  const btn=$('confirmRosterImport');if(btn)btn.onclick=()=>commitRosterImport(rows);
+ }catch(err){out.innerHTML='<p class="notice show error">'+esc(err.message||'تعذر قراءة الملف.')+'</p>'}
+}
+async function commitRosterImport(rows){
+ if(!['admin','department_head'].includes(currentRole)){showNotice('الاستيراد متاح لرئيس القسم أو الإدارة فقط.','error');return}
+ if(!Array.isArray(rows)||!rows.length||rows.some(x=>x._issues?.length)){showNotice('صحّح جميع أخطاء الكشف قبل الاستيراد.','error');return}
+ if(!confirm('سيتم حفظ '+rows.length+' سجلًا في كشف الطلاب المؤهلين. الأرقام الموجودة قد تُحدّث بياناتها. هل تتابع؟'))return;
+ const btn=$('confirmRosterImport');if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ…'}
+ const payload=rows.map(({_line,_issues,...x})=>x);
+ try{
+  const {error}=await sb.from('eligible_student_roster').upsert(payload,{onConflict:'university_number'});
+  if(error)throw error;
+  showNotice('تم استيراد '+payload.length+' سجلًا إلى كشف الطلاب المؤهلين. لم تُنشأ حسابات طلاب تلقائيًا.','success');
+  $('rosterPreview').innerHTML='<p class="notice show success">تم حفظ '+payload.length+' سجلًا في قاعدة البيانات.</p>';
+ }catch(err){
+  showNotice('لم يتم تأكيد حفظ الكشف. '+(err.message||'تحقق من جدول eligible_student_roster وصلاحيات قاعدة البيانات.'),'error');
+  if(btn){btn.disabled=false;btn.textContent='إعادة المحاولة'}
+ }
+}
+
 async function fillEntitySelect(){
  const el=$('requestEntity');if(!el||!sb)return;
  const {data,error}=await sb.from('training_entities').select('id,name').eq('is_approved',true).eq('is_active',true).order('name');
