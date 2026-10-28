@@ -342,7 +342,7 @@ if(authMeta.must_change_password){
   e.preventDefault();const a=$('forcedNewPassword').value,b=$('forcedConfirmPassword').value;
   if(a.length<10){showNotice('اجعل كلمة المرور الجديدة 10 أحرف على الأقل.','error');return}
   if(a!==b){showNotice('كلمتا المرور غير متطابقتين.','error');return}
-  try{await studentAuthRequest({action:'change_password',new_password:a},currentSession.access_token);await sb.auth.refreshSession();await refreshSession();showNotice('تم تغيير كلمة المرور.','success');renderPortal()}
+  try{const passwordFunction=currentRole==='department_head'||currentRole==='admin'?'department-head-auth':currentRole==='supervisor'?'supervisor-auth':'student-auth';await studentAuthRequest({action:'change_password',new_password:a},currentSession.access_token,passwordFunction);await sb.auth.refreshSession();await refreshSession();showNotice('تم تغيير كلمة المرور.','success');renderPortal()}
   catch(err){showNotice(err.message||'تعذر تغيير كلمة المرور.','error')}
  };
  return;
