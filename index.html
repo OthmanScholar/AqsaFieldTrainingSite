@@ -387,7 +387,7 @@ async function previewRosterFile(){
   const seen=new Set(),rows=[],issues=[];
   raw.forEach((o,i)=>{
    const line=i+2,number=String(o[mapped.number]??'').trim().replace(/\s/g,''),name=String(o[mapped.name]??'').trim();
-   const g0=rosterHeaderKey(o[mapped.gender]),gender=(['ذكر','طالب','طلاب','male','m','1'].includes(g0)?'male':['انثى','أنثى','طالبه','طالبات','female','f','2'].includes(g0)?'female':'');
+   const g0=rosterHeaderKey(o[mapped.gender]),gender=(['ذكر','طالب','طلاب','male','m','1'].map(rosterHeaderKey).includes(g0)?'male':['انثى','أنثى','طالبه','طالبة','طالبات','female','f','2'].map(rosterHeaderKey).includes(g0)?'female':'');
    const specName=String(o[mapped.specialty]??'').trim(),specialtyId=specMap.get(rosterHeaderKey(specName));
    const rowIssues=[];
    if(!/^\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
