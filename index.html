@@ -384,7 +384,7 @@ async function loadAssignmentManager(){
    e.preventDefault();const studentId=$('assignStudent').value,supervisorId=$('assignSupervisor').value,entityVal=$('assignEntity').value||null;
    const student=eligible.find(x=>x.user_id===studentId);if(!student){showNotice('الطالب المختار غير مؤهل وفق بيانات النظام الحالية.','error');return}
    if(!staff.some(x=>x.user_id===supervisorId)){showNotice('المشرف المختار ليس حسابًا نشطًا مرتبطًا بدليل الموظفين.','error');return}
-   if(assignments.some(a=>a.student_user_id===studentId&&a.supervisor_user_id===supervisorId)){showNotice('هذا الطالب مسند إلى المشرف نفسه بالفعل.','error');return}
+   if(assignments.some(a=>a.student_user_id===studentId)){const existing=assignments.find(a=>a.student_user_id===studentId);showNotice(existing.supervisor_user_id===supervisorId?'هذا الطالب مسند إلى المشرف نفسه بالفعل.':'الطالب مسند إلى مشرف آخر بالفعل. راجع سجل التكليفات قبل أي تغيير حتى لا يتكرر الإسناد.','error');return}
    if(!confirm('تأكيد إسناد الطالب '+student.full_name+' إلى المشرف '+staffMap.get(supervisorId)+'؟'))return;
    const btn=$('assignmentForm').querySelector('button[type="submit"]');btn.disabled=true;
    try{const {data,error}=await sb.rpc('assign_training_supervisor',{p_supervisor_user_id:supervisorId,p_student_user_id:studentId,p_specialty_id:Number(student.specialty_id),p_training_entity_id:entityVal?Number(entityVal):null});if(error)throw error;showNotice('تم حفظ التكليف الرسمي. رقم التكليف: '+(data??'تم'),'success');await loadAssignmentManager()}
