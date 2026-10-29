@@ -437,7 +437,7 @@ async function previewRosterFile(){
    if(gender==='female'&&!number.startsWith('222'))rowIssues.push('رقم الطالبة يجب أن يبدأ 222');
    if(!specialtyId)rowIssues.push('التخصص غير مطابق لقائمة النظام');
    if(rowIssues.length)issues.push({line,number,name,issues:rowIssues});
-   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,notes:mapped.notes?String(o[mapped.notes]??'').trim()||null:null,imported_by:currentSession.user.id,_line:line,_issues:rowIssues});
+   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,is_active:true,added_by:currentSession.user.id,_line:line,_issues:rowIssues});
   });
   window.__rosterImportRows=rows;
   const valid=rows.filter(x=>!x._issues.length);
