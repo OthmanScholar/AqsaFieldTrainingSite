@@ -359,16 +359,27 @@ async function loadAssignmentManager(){
  const r=$('staffResults');r.innerHTML='<div class="card"><h3>إدارة توزيع الطلاب على المشرفين</h3><p class="muted">اختر طالبًا مؤهلًا ومشرفًا لديه حساب وظيفي نشط، ثم اعتمد الإسناد. يعتمد الحفظ على صلاحيات قاعدة البيانات ودالة assign_training_supervisor.</p><div id="assignmentManagerBody">جارٍ تحميل البيانات...</div></div>';
  const body=$('assignmentManagerBody');
  try{
-  const [studentsResult,staffResult,specsResult,entitiesResult,assignResult]=await Promise.all([
+  const [studentsResult,supervisorDirectoryResult,specsResult,entitiesResult,assignResult]=await Promise.all([
    sb.from('student_profiles').select('user_id,full_name,university_number,gender,specialty_id,completed_hours,eligibility_status,student_area').order('full_name').limit(2000),
-   sb.from('staff_directory').select('user_id,full_name,staff_number,staff_type,is_active').eq('staff_type','supervisor').eq('is_active',true).not('user_id','is',null).order('full_name').limit(500),
+   sb.from('public_supervisors').select('id,name,user_id,phone,region,category,specialty,is_active').eq('is_active',true).not('user_id','is',null).order('name').limit(500),
    sb.from('specialties').select('id,name').eq('is_active',true).order('name'),
    sb.from('training_entities').select('id,name').eq('is_active',true).order('name').limit(1000),
    sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').limit(5000)
   ]);
-  const err=studentsResult.error||staffResult.error||specsResult.error||entitiesResult.error||assignResult.error;
+  const err=studentsResult.error||supervisorDirectoryResult.error||specsResult.error||entitiesResult.error||assignResult.error;
   if(err)throw err;
-  const students=studentsResult.data||[],staff=staffResult.data||[],specs=specsResult.data||[],entities=entitiesResult.data||[],assignments=assignResult.data||[];
+  const supervisorDirectory=supervisorDirectoryResult.data||[];
+  const linkedIds=supervisorDirectory.map(x=>x.user_id).filter(Boolean);
+  const rolesResult=linkedIds.length
+   ? await sb.from('user_roles').select('user_id,role,is_active').in('user_id',linkedIds).eq('role','supervisor').eq('is_active',true)
+   : {data:[],error:null};
+  if(rolesResult.error)throw rolesResult.error;
+  const activeRoleIds=new Set((rolesResult.data||[]).map(x=>x.user_id));
+  const staff=supervisorDirectory.filter(x=>activeRoleIds.has(x.user_id)).map(x=>({
+   user_id:x.user_id,full_name:x.name,staff_number:'حساب نشط',staff_type:'supervisor',is_active:x.is_active,
+   region:x.region,category:x.category,specialty:x.specialty,supervisor_id:x.id
+  }));
+  const students=studentsResult.data||[],specs=specsResult.data||[],entities=entitiesResult.data||[],assignments=assignResult.data||[];
   const specMap=new Map(specs.map(x=>[String(x.id),x.name]));
   const entityMap=new Map(entities.map(x=>[String(x.id),x.name]));
   const staffMap=new Map(staff.map(x=>[x.user_id,x.full_name]));
@@ -525,18 +536,19 @@ async function loadAssigned(){
  r.innerHTML='<p><strong>إجمالي الطلاب المسندين: '+assignments.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>#</th><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>المنطقة</th></tr></thead><tbody>'+assignments.map((x,i)=>{const p=profiles.get(x.student_user_id)||{};return `<tr><td>${i+1}</td><td>${esc(p.full_name||'بيانات الاسم غير متاحة')}</td><td>${esc(p.university_number||'—')}</td><td>${esc(specialties.get(String(x.specialty_id))||'غير محدد')}</td><td>${esc(entities.get(String(x.training_entity_id))||'غير محددة')}</td><td>${esc(p.student_area||'—')}</td></tr>`}).join('')+'</tbody></table></div>';
 }
 async function loadVisits(){
- const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل تقارير الزيارات...</p>';
- let q=sb.from('training_visits').select('id,student_user_id,supervisor_user_id,visit_date,visit_type,visit_notes,created_at').order('visit_date',{ascending:false}).limit(200);
+ const r=$('staffResults');
+ r.innerHTML='<p>جارٍ تحميل تقارير الزيارات...</p>';
+ let q=sb.from('supervisor_training_visits').select('id,student_user_id,supervisor_user_id,semester_code,visit_number,visit_date,visit_type,visit_notes,created_at').order('visit_date',{ascending:false}).limit(500);
  if(currentRole==='supervisor')q=q.eq('supervisor_user_id',currentSession.user.id);
  const {data,error}=await q;
- if(error){r.textContent='تعذر تحميل الزيارات: '+error.message+' — راجع مخطط قاعدة البيانات وسياسات الصلاحيات.';return}
+ if(error){r.textContent='تعذر تحميل الزيارات: '+error.message;return}
  const visits=data||[];
  if(!visits.length){r.innerHTML='<p class="muted">لا توجد تقارير زيارات مسجلة حتى الآن.</p>';return}
  const ids=[...new Set(visits.map(x=>x.student_user_id).filter(Boolean))];
  const pr=ids.length?await sb.from('student_profiles').select('user_id,full_name,university_number').in('user_id',ids):{data:[],error:null};
  if(pr.error){r.textContent='تعذر تحميل أسماء الطلاب: '+pr.error.message;return}
  const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
- r.innerHTML='<p><strong>عدد تقارير الزيارات المعروضة: '+visits.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>تاريخ الزيارة</th><th>نوع الزيارة</th><th>ملاحظات</th></tr></thead><tbody>'+visits.map(x=>{const p=profiles.get(x.student_user_id)||{};return `<tr><td>${esc(p.full_name||'بيانات الاسم غير متاحة')}</td><td>${esc(p.university_number||'—')}</td><td>${esc(x.visit_date||'—')}</td><td>${esc(x.visit_type||'—')}</td><td>${esc(x.visit_notes||'—')}</td></tr>`}).join('')+'</tbody></table></div>';
+ r.innerHTML='<p><strong>عدد تقارير الزيارات المعروضة: '+visits.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الفصل</th><th>الزيارة</th><th>تاريخ الزيارة</th><th>نوع الزيارة</th><th>ملاحظات</th></tr></thead><tbody>'+visits.map(x=>{const p=profiles.get(x.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.semester_code||'—')+'</td><td>'+esc(x.visit_number||'—')+'</td><td>'+esc(x.visit_date||'—')+'</td><td>'+esc(x.visit_type||'—')+'</td><td>'+esc(x.visit_notes||'—')+'</td></tr>'}).join('')+'</tbody></table></div>';
 }
 async function loadWorkloadReport(){
  const r=$('staffResults');
