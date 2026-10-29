@@ -1029,13 +1029,49 @@ async function loadWorkloadReport(){
    }
    return;
   }
-  const directoryResult=await sb.from('public_supervisors').select('user_id,name').not('user_id','is',null);
-  if(directoryResult.error){out.innerHTML='<p class="notice show error">تعذر تحميل أسماء المشرفين: '+esc(directoryResult.error.message)+'</p>';return}
+  const [directoryResult,entityResult,specialtyResult]=await Promise.all([
+   sb.from('public_supervisors').select('user_id,name').not('user_id','is',null),
+   sb.from('training_entities').select('id,name'),
+   sb.from('specialties').select('id,name')
+  ]);
+  if(directoryResult.error||entityResult.error||specialtyResult.error){out.innerHTML='<p class="notice show error">تعذر تحميل بيانات المشرفين أو جهات التدريب أو التخصصات: '+esc((directoryResult.error||entityResult.error||specialtyResult.error).message||'')+'</p>';return}
   const supervisorNames=new Map((directoryResult.data||[]).map(s=>[s.user_id,s.name]));
-  const supervisors=[...new Set(assignments.map(a=>a.supervisor_user_id).filter(Boolean))];
+  const entityNames=new Map((entityResult.data||[]).map(x=>[String(x.id),x.name]));
+  const specialtyNames=new Map((specialtyResult.data||[]).map(x=>[String(x.id),x.name]));
+  const supervisors=[...new Set([...assignments.map(a=>a.supervisor_user_id),...(directoryResult.data||[]).map(s=>s.user_id)].filter(Boolean))];
   const rows=supervisors.map(sid=>{const aa=assignments.filter(a=>a.supervisor_user_id===sid),vv=visits.filter(v=>v.supervisor_user_id===sid),rep=reportMap.get(sid);return {sid,name:supervisorNames.get(sid)||'مشرف غير مربوط',students:aa.length,required:aa.length*4,completed:vv.length,remaining:Math.max(0,aa.length*4-vv.length),rep,aa,vv}});
-  out.innerHTML='<div class="service-buttons"><button class="btn gold" id="printWorkload">طباعة كشف الأعباء</button></div><p>الفصل الدراسي: <strong>'+esc(semester)+'</strong> — قاعدة الاحتساب: أربع زيارات لكل طالب.</p><div class="tablewrap"><table id="workloadPrintTable"><thead><tr><th>اسم المشرف</th><th>عدد الطلاب</th><th>الزيارات المطلوبة</th><th>الزيارات المسجلة</th><th>المتبقي</th><th>حالة الكشف</th><th>الإجراء</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.students+'</td><td>'+x.required+'</td><td>'+x.completed+'</td><td>'+x.remaining+'</td><td>'+esc(({draft:'مسودة',submitted:'مرسل',approved:'معتمد',returned:'معاد للمراجعة'}[x.rep?.report_status]||'لم يُرسل'))+'</td><td>'+(x.rep?.report_status==='submitted'?'<button class="btn" data-workload-approve="'+x.rep.id+'">اعتماد</button> <button class="btn ghost" data-workload-return="'+x.rep.id+'">إعادة للمراجعة</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';
+  out.innerHTML='<div class="service-buttons"><button class="btn gold" id="printWorkload">طباعة كشف الأعباء العام / PDF</button></div><p>الفصل الدراسي: <strong>'+esc(semester)+'</strong> — قاعدة الاحتساب: أربع زيارات لكل طالب. اختر مشرفًا لعرض كشفه التفصيلي.</p><div class="tablewrap"><table id="workloadPrintTable"><thead><tr><th>اسم المشرف</th><th>عدد الطلاب</th><th>الزيارات المطلوبة</th><th>الزيارات المسجلة</th><th>المتبقي</th><th>حالة الكشف</th><th>عرض الكشف</th><th>الإجراء</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.students+'</td><td>'+x.required+'</td><td>'+x.completed+'</td><td>'+x.remaining+'</td><td>'+esc(({draft:'مسودة',submitted:'مرسل',approved:'معتمد',returned:'معاد للمراجعة'}[x.rep?.report_status]||'لم يُرسل'))+'</td><td><button class="btn" data-view-supervisor="'+esc(x.sid)+'">عرض كشف المشرف</button></td><td>'+(x.rep?.report_status==='submitted'?'<button class="btn" data-workload-approve="'+x.rep.id+'">اعتماد</button> <button class="btn ghost" data-workload-return="'+x.rep.id+'">إعادة للمراجعة</button>':'—')+'</td></tr>').join('')+'</tbody></table></div><section class="card" style="margin-top:18px"><h3>الكشف التفصيلي للمشرف</h3><div class="form-grid"><label>اختر المشرف<select id="detailSupervisor"><option value="">اختر المشرف لعرض كشفه</option>'+rows.map(x=>'<option value="'+esc(x.sid)+'">'+esc(x.name)+' — '+x.students+' طالب</option>').join('')+'</select></label></div><div class="service-buttons"><button class="btn" id="exportWorkloadCsv" disabled>تصدير إلى Excel (CSV)</button><button class="btn gold" id="printSupervisorDetail" disabled>طباعة الكشف / حفظ PDF</button></div><div id="supervisorDetailOutput"><p class="muted">اختر مشرفًا لعرض أسماء الطلاب وجهات التدريب وتواريخ الزيارات الأربع.</p></div></section>';
   $('printWorkload').onclick=()=>window.print();
+  const detailSelect=$('detailSupervisor'),detailOut=$('supervisorDetailOutput'),exportBtn=$('exportWorkloadCsv'),printDetailBtn=$('printSupervisorDetail');
+  let currentDetailRows=[];
+  function renderSupervisorDetail(sid){
+   const summary=rows.find(x=>x.sid===sid);
+   if(!summary){detailOut.innerHTML='<p class="muted">اختر مشرفًا لعرض كشفه التفصيلي.</p>';exportBtn.disabled=true;printDetailBtn.disabled=true;currentDetailRows=[];return}
+   const studentRows=summary.aa.map(a=>{
+    const p=profiles.get(a.student_user_id)||{};
+    const studentVisits=visitMap.get(visitKey(sid,a.student_user_id))||[];
+    const byNumber=new Map(studentVisits.map(v=>[Number(v.visit_number),v]));
+    const dates=[1,2,3,4].map(n=>byNumber.get(n)?.visit_date||'');
+    const statuses=[1,2,3,4].map(n=>byNumber.has(n)?'منفذة':'لم تُنفذ');
+    return {name:p.full_name||'بيانات الاسم غير متاحة',university_number:p.university_number||'—',specialty:specialtyNames.get(String(a.specialty_id))||'—',entity:entityNames.get(String(a.training_entity_id))||'—',dates,statuses,completed:dates.filter(Boolean).length};
+   });
+   currentDetailRows=studentRows;
+   const completed=studentRows.reduce((n,x)=>n+x.completed,0),required=studentRows.length*4;
+   detailOut.innerHTML='<div class="print-area"><h3>كشف أعباء المشرف وتقرير الزيارات</h3><p><strong>المشرف:</strong> '+esc(summary.name)+' — <strong>الفصل:</strong> '+esc(semester)+'</p><p><strong>إجمالي الطلاب:</strong> '+studentRows.length+' — <strong>الزيارات المنفذة:</strong> '+completed+' من '+required+' — <strong>المتبقية:</strong> '+Math.max(0,required-completed)+'</p><div class="tablewrap"><table id="supervisorDetailTable"><thead><tr><th>م</th><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>الزيارة الأولى / التاريخ</th><th>حالة 1</th><th>الزيارة الثانية / التاريخ</th><th>حالة 2</th><th>الزيارة الثالثة / التاريخ</th><th>حالة 3</th><th>الزيارة الرابعة / التاريخ</th><th>حالة 4</th><th>المنفذ</th></tr></thead><tbody>'+studentRows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.entity)+'</td>'+[0,1,2,3].map(n=>'<td>'+esc(x.dates[n]||'—')+'</td><td>'+x.statuses[n]+'</td>').join('')+'<td>'+x.completed+' / 4</td></tr>').join('')+'</tbody></table></div></div>';
+   exportBtn.disabled=!studentRows.length;printDetailBtn.disabled=!studentRows.length;
+  }
+  detailSelect.onchange=()=>renderSupervisorDetail(detailSelect.value);
+  out.querySelectorAll('[data-view-supervisor]').forEach(b=>b.onclick=()=>{detailSelect.value=b.dataset.viewSupervisor;renderSupervisorDetail(detailSelect.value);detailOut.scrollIntoView({behavior:'smooth',block:'start'})});
+  exportBtn.onclick=()=>{
+   if(!currentDetailRows.length)return;
+   const summary=rows.find(x=>x.sid===detailSelect.value);
+   const head=['اسم الطالب','الرقم الجامعي','التخصص','جهة التدريب','تاريخ الزيارة الأولى','حالة الزيارة الأولى','تاريخ الزيارة الثانية','حالة الزيارة الثانية','تاريخ الزيارة الثالثة','حالة الزيارة الثالثة','تاريخ الزيارة الرابعة','حالة الزيارة الرابعة','الزيارات المنفذة'];
+   const csvRows=[['كشف أعباء المشرف وتقرير الزيارات'],['المشرف',summary?.name||''],['الفصل الدراسي',semester],[],head,...currentDetailRows.map(x=>[x.name,x.university_number,x.specialty,x.entity,x.dates[0],x.statuses[0],x.dates[1],x.statuses[1],x.dates[2],x.statuses[2],x.dates[3],x.statuses[3],x.completed+'/4'])];
+   const csv='\uFEFF'+csvRows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='كشف-أعباء-'+(summary?.name||'المشرف')+'-'+semester+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  };
+  printDetailBtn.onclick=()=>window.print();
   out.querySelectorAll('[data-workload-approve]').forEach(b=>b.onclick=async()=>{if(!confirm('اعتماد كشف أعباء هذا المشرف؟'))return;const {error}=await sb.rpc('review_supervisor_workload',{p_report_id:Number(b.dataset.workloadApprove),p_decision:'approved',p_review_note:null});if(error){showNotice('تعذر اعتماد الكشف: '+error.message,'error');return}showNotice('تم اعتماد الكشف.','success');await $('loadWorkloadData').click()});
   out.querySelectorAll('[data-workload-return]').forEach(b=>b.onclick=async()=>{const note=prompt('اكتب سبب إعادة الكشف للمشرف:');if(!note||!note.trim()){showNotice('يجب كتابة سبب الإعادة.','error');return}const {error}=await sb.rpc('review_supervisor_workload',{p_report_id:Number(b.dataset.workloadReturn),p_decision:'returned',p_review_note:note.trim()});if(error){showNotice('تعذر إعادة الكشف: '+error.message,'error');return}showNotice('تمت إعادة الكشف للمشرف.','success');await $('loadWorkloadData').click()});
  };
