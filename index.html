@@ -97,6 +97,20 @@
      <div class="field"><label for="supervisorConfirmPassword">تأكيد كلمة المرور</label><input id="supervisorConfirmPassword" type="password" minlength="10" required autocomplete="new-password"></div>
      <button class="btn gold" type="submit">إنشاء حساب المشرف</button>
     </form>
+
+    <div class="card" style="margin-top:18px">
+     <h4>مشرف جديد غير مسجل في الكشف؟</h4>
+     <p class="field-help">أرسل طلب اعتماد إلى رئيس القسم. لن يُنشأ حساب أو تُمنح صلاحيات قبل الموافقة.</p>
+     <form id="supervisorJoinRequestForm">
+      <div class="field"><label for="joinSupervisorName">الاسم الكامل</label><input id="joinSupervisorName" required maxlength="160" autocomplete="name"></div>
+      <div class="field"><label for="joinSupervisorNationalId">رقم الهوية الوطنية</label><input id="joinSupervisorNationalId" required inputmode="numeric" pattern="[0-9]{7,12}" minlength="7" maxlength="12" autocomplete="off"></div>
+      <div class="field"><label for="joinSupervisorPhone">رقم الهاتف للتواصل</label><input id="joinSupervisorPhone" required maxlength="40" autocomplete="tel"></div>
+      <div class="field"><label for="joinSupervisorRegion">منطقة العمل</label><input id="joinSupervisorRegion" required maxlength="100" placeholder="مثال: الوسطى / النصيرات"></div>
+      <div class="field"><label for="joinSupervisorSpecialty">التخصص أو مجال الإشراف</label><input id="joinSupervisorSpecialty" required maxlength="160" placeholder="مثال: تكنولوجيا المعلومات"></div>
+      <button class="btn ghost" type="submit">إرسال طلب اعتماد مشرف جديد</button>
+     </form>
+    </div>
+
    </div>
    <div id="signupView" class="auth-view hidden">
     <h3>تسجيل طالب جديد</h3>
@@ -241,6 +255,25 @@ async function renderSupervisorAccountManager(){
    : '<p class="muted small">لا توجد سجلات نشطة أخرى تحتاج تسجيل هوية جديدة. المشرفون الذين سُجلت هوياتهم يمكنهم إنشاء حساباتهم من واجهة «دخول المشرف».</p>';
   const status=x=>!x.active?'غير نشط':x.account_linked?'حساب مرتبط':x.national_id_registered?'الهوية مسجلة — يمكن للمشرف إنشاء حساب':'الهوية غير مسجلة — تحتاج مراجعة القسم';
   out.innerHTML=identitySetup+'<p><strong>عدد المشرفين:</strong> '+rows.length+' — <strong>حسابات مرتبطة:</strong> '+rows.filter(x=>x.account_linked).length+' — <strong>هويات تحتاج تسجيلًا:</strong> '+needsIdentity.length+'</p><div class="tablewrap"><table><thead><tr><th>المشرف</th><th>التخصص</th><th>الفئة</th><th>المنطقة</th><th>الحساب</th><th>حالة الهوية</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.category||'—')+'</td><td>'+esc(x.region||'—')+'</td><td>'+esc(x.account_linked?'مرتبط':'غير مرتبط')+'</td><td>'+esc(status(x))+'</td></tr>').join('')+'</tbody></table></div><p class="muted small">لا يُظهر النظام أرقام الهوية في الجدول. لا تستخدم هذه الشاشة لتغيير هوية مشرف لديه حساب مرتبط.</p>';
+
+  const joinResult=await studentAuthRequest({action:'list_join_requests'},currentSession.access_token,'supervisor-auth');
+  const joinRows=joinResult.requests||[];
+  out.innerHTML += '<div class="card"><h3>طلبات اعتماد المشرفين الجدد ('+joinRows.filter(x=>x.status==='pending').length+' قيد المراجعة)</h3><p class="muted small">تظهر بيانات التواصل المطلوبة للمراجعة فقط؛ لا تُعرض أرقام الهوية. اعتماد الطلب يضيف المشرف إلى الكشف ويسجل هويته حتى يتمكن من إنشاء حسابه.</p>'+
+   (joinRows.length?'<div class="tablewrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>التخصص</th><th>تاريخ الطلب</th><th>الحالة / القرار</th></tr></thead><tbody>'+
+   joinRows.map(x=>'<tr><td>'+esc(x.full_name||'—')+'</td><td>'+esc(x.phone||'—')+'</td><td>'+esc(x.region||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.submitted_at?new Date(x.submitted_at).toLocaleDateString('ar'):'—')+'</td><td>'+
+   (x.status==='pending'?'<button class="btn gold" type="button" data-review-join="approve" data-request-id="'+Number(x.request_id)+'">اعتماد</button> <button class="btn ghost" type="button" data-review-join="reject" data-request-id="'+Number(x.request_id)+'">رفض</button>':esc(x.status==='approved'?'معتمد':'مرفوض'))+
+   '</td></tr>').join('')+'</tbody></table></div>':'<p>لا توجد طلبات انضمام حتى الآن.</p>')+'</div>';
+  out.querySelectorAll('[data-review-join]').forEach(button=>button.addEventListener('click',async()=>{
+   const decision=button.dataset.reviewJoin,requestId=Number(button.dataset.requestId);
+   const question=decision==='approve'?'هل تريد اعتماد هذا المشرف وإضافته إلى كشف القسم؟':'هل تريد رفض طلب الانضمام؟';
+   if(!confirm(question))return;
+   button.disabled=true;
+   try{
+    const result=await studentAuthRequest({action:'review_join_request',request_id:requestId,decision},currentSession.access_token,'supervisor-auth');
+    showNotice(result.message||'تمت مراجعة الطلب.','success');
+    await renderSupervisorAccountManager();
+   }catch(err){showNotice(err.message||'تعذرت مراجعة الطلب.','error');button.disabled=false}
+  });
   const identityForm=$('supervisorIdentityForm');
   if(identityForm) identityForm.addEventListener('submit',async e=>{
    e.preventDefault();
@@ -492,6 +525,28 @@ $('supervisorSignupForm').addEventListener('submit',async e=>{
  }catch(err){showNotice(err.message||'تعذر إنشاء حساب المشرف.','error')}
  finally{if(submit){submit.disabled=false;submit.textContent=oldText}}
 });
+
+$('supervisorJoinRequestForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const form=e.currentTarget,button=form.querySelector('button[type="submit"]'),oldText=button.textContent;
+ const payload={
+  action:'request_join',
+  full_name:$('joinSupervisorName').value.trim(),
+  national_id:$('joinSupervisorNationalId').value.replace(/\\D/g,''),
+  phone:$('joinSupervisorPhone').value.trim(),
+  region:$('joinSupervisorRegion').value.trim(),
+  specialty:$('joinSupervisorSpecialty').value.trim()
+ };
+ if(!/^\\d{7,12}$/.test(payload.national_id)){showNotice('أدخل رقم هوية صحيحًا من 7 إلى 12 رقمًا.','error');return}
+ button.disabled=true;button.textContent='جارٍ إرسال الطلب...';
+ try{
+  const result=await studentAuthRequest(payload,undefined,'supervisor-auth');
+  showNotice(result.message||'تم إرسال طلب الاعتماد إلى رئيس القسم.','success');
+  form.reset();
+ }catch(err){showNotice(err.message||'تعذر إرسال طلب الاعتماد.','error')}
+ finally{button.disabled=false;button.textContent=oldText}
+});
+
 $('passwordResetForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const submit=e.submitter;if(submit)submit.disabled=true;
