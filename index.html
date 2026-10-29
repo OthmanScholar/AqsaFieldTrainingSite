@@ -488,7 +488,9 @@ async function previewRosterFile(){
    name:['اسم الطالب','الاسم الرباعي','اسم الطالبة','الاسم','full_name','fullname','studentname'],
    gender:['الجنس','النوع','gender'],
    specialty:['التخصص','اسم التخصص','specialty','specialtyname'],
-   notes:['ملاحظات','notes']
+   notes:['ملاحظات','notes'],
+   active:['is_active','active','حالة التفعيل','حالة التسجيل','نشط','فعال'],
+   hours:['completed_hours','completedhours','ساعات الإنجاز','ساعات الانجاز','الساعات المنجزة','hours']
   };
   const headers=Object.keys(raw[0]);
   const mapped={};
@@ -499,23 +501,38 @@ async function previewRosterFile(){
    const line=i+2,number=String(o[mapped.number]??'').trim().replace(/\s/g,''),name=String(o[mapped.name]??'').trim();
    const g0=rosterHeaderKey(o[mapped.gender]),gender=(['ذكر','طالب','طلاب','male','m','1'].map(rosterHeaderKey).includes(g0)?'male':['انثى','أنثى','طالبه','طالبة','طالبات','female','f','2'].map(rosterHeaderKey).includes(g0)?'female':'');
    const specName=String(o[mapped.specialty]??'').trim(),specialtyId=specMap.get(rosterHeaderKey(specName));
-   const rowIssues=[];
-   if(!/^\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
+   const hoursText=mapped.hours?String(o[mapped.hours]??'').trim():'';
+   const hoursValue=hoursText===''?null:Number(hoursText);
+   const activeText=mapped.active?rosterHeaderKey(o[mapped.active]):'';
+   const trueValues=['true','1','نعم','نشط','فعال','active','yes'].map(rosterHeaderKey);
+   const falseValues=['false','0','لا','غيرنشط','متوقف','inactive','no'].map(rosterHeaderKey);
+   const rowIssues=[],rowWarnings=[];
+   if(!/^\\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
    if(number&&seen.has(number))rowIssues.push('رقم مكرر داخل الملف');seen.add(number);
    if(!name)rowIssues.push('الاسم فارغ');
    if(!gender)rowIssues.push('الجنس يجب أن يكون ذكر/أنثى أو male/female');
-   if(gender==='male'&&!number.startsWith('122'))rowIssues.push('رقم الطالب الذكر يجب أن يبدأ 122');
-   if(gender==='female'&&!number.startsWith('222'))rowIssues.push('رقم الطالبة يجب أن يبدأ 222');
+   if(mapped.active&&activeText&&!trueValues.includes(activeText)&&!falseValues.includes(activeText))rowIssues.push('حالة التفعيل يجب أن تكون TRUE/FALSE أو نعم/لا');
+   if(hoursText!==''&&(!Number.isFinite(hoursValue)||hoursValue<0))rowIssues.push('عدد الساعات غير صحيح');
    if(!specialtyId)rowIssues.push('التخصص غير مطابق لقائمة النظام');
+   let isActive=mapped.active?trueValues.includes(activeText):true;
+   if(mapped.active&&falseValues.includes(activeText))isActive=false;
+   if(hoursValue!==null&&Number.isFinite(hoursValue)&&hoursValue<36){isActive=false;rowWarnings.push('أقل من 36 ساعة؛ سيُحفظ السجل غير نشط');}
+   if((gender==='male'&&!number.startsWith('122'))||(gender==='female'&&!number.startsWith('222'))){
+    isActive=false;
+    rowWarnings.push('بادئة الرقم لا تطابق قاعدة التسجيل الحالية؛ سيُحفظ غير نشط للمراجعة');
+   }
    if(rowIssues.length)issues.push({line,number,name,issues:rowIssues});
-   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,is_active:true,added_by:currentSession.user.id,_line:line,_issues:rowIssues});
+   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,is_active:isActive,added_by:currentSession.user.id,_line:line,_issues:rowIssues,_warnings:rowWarnings});
   });
   window.__rosterImportRows=rows;
   const valid=rows.filter(x=>!x._issues.length);
-  out.innerHTML='<p><strong>عدد الصفوف:</strong> '+rows.length+' — <strong>صالحة:</strong> '+valid.length+' — <strong>تحتاج تصحيحًا:</strong> '+issues.length+'</p>'+
+  const inactiveCount=valid.filter(x=>x.is_active!==true).length;
+  const warnedRows=valid.filter(x=>x._warnings?.length);
+  out.innerHTML='<p><strong>عدد الصفوف:</strong> '+rows.length+' — <strong>صالحة للاستيراد:</strong> '+valid.length+' — <strong>تحتاج تصحيحًا:</strong> '+issues.length+' — <strong>ستُحفظ غير نشطة:</strong> '+inactiveCount+'</p>'+
    (issues.length?'<div class="tablewrap"><table><thead><tr><th>صف Excel</th><th>الرقم</th><th>الاسم</th><th>المشكلات</th></tr></thead><tbody>'+issues.slice(0,100).map(x=>'<tr><td>'+x.line+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.issues.join('، '))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="notice show success">اجتاز الكشف الفحص الأولي.</p>')+
-   '<p class="muted small">المعاينة لا تحفظ شيئًا. ستُحدّث الأرقام الموجودة مسبقًا عند الاستيراد؛ تأكد من الملف قبل المتابعة.</p>'+
-   '<button class="btn gold" id="confirmRosterImport" type="button" '+(valid.length&&!issues.length?'':'disabled')+'>استيراد '+valid.length+' طالب إلى قاعدة البيانات</button>';
+   (warnedRows.length?'<p class="notice show">تنبيه: '+warnedRows.length+' سجلًا سيُحفظ غير نشط بسبب عدد الساعات أو بادئة الرقم، ولن يُسمح له بالتسجيل قبل المراجعة.</p>':'')+
+   '<p class="muted small">المعاينة لا تحفظ شيئًا. ستُحدّث الأرقام الموجودة مسبقًا عند الاستيراد؛ الصفوف غير النشطة تبقى محفوظة للمراجعة ولا تُفتح لها إمكانية التسجيل.</p>'+
+   '<button class="btn gold" id="confirmRosterImport" type="button" '+(valid.length&&!issues.length?'':'disabled')+'>استيراد '+valid.length+' طالب (منهم '+inactiveCount+' غير نشط)</button>';
   const btn=$('confirmRosterImport');if(btn)btn.onclick=()=>commitRosterImport(rows);
  }catch(err){out.innerHTML='<p class="notice show error">'+esc(err.message||'تعذر قراءة الملف.')+'</p>'}
 }
@@ -524,7 +541,7 @@ async function commitRosterImport(rows){
  if(!Array.isArray(rows)||!rows.length||rows.some(x=>x._issues?.length)){showNotice('صحّح جميع أخطاء الكشف قبل الاستيراد.','error');return}
  if(!confirm('سيتم حفظ '+rows.length+' سجلًا في كشف الطلاب المؤهلين. الأرقام الموجودة قد تُحدّث بياناتها. هل تتابع؟'))return;
  const btn=$('confirmRosterImport');if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ…'}
- const payload=rows.map(({_line,_issues,...x})=>x);
+ const payload=rows.map(({_line,_issues,_warnings,...x})=>x);
  try{
   const {error}=await sb.from('eligible_student_roster').upsert(payload,{onConflict:'university_number'});
   if(error)throw error;
