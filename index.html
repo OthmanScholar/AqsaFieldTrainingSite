@@ -576,6 +576,34 @@ if(currentRole==='student'){const {data:p}=await sb.from('student_profiles').sel
 await fillEntitySelect();await fillPreferenceOptions();await loadStudentPreference();if($('requestForm'))$('requestForm').onsubmit=submitRequest;$('evidenceForm').onsubmit=submitEvidence;$('preferenceForm').onsubmit=saveStudentPreference;
 }else if(['admin','department_head','supervisor'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadVisits">تقارير الزيارات</button><button class="btn" id="loadWorkload">كشف أعباء المشرفين</button>${currentRole==='supervisor'?'<button class="btn gold" id="openSupervisorForms">نماذج التقييم حسب التخصص</button>':''}${currentRole==='admin'||currentRole==='department_head'?'<button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button><button class="btn gold" id="loadStudentRegistrations">مراجعة تسجيل الطلاب</button><button class="btn" id="loadRegistrationRequests">مراجعة طلبات التدريب</button><button class="btn gold" id="rosterImportBtn">استيراد كشف الطلاب (Excel)</button><button class="btn" id="addSingleStudentBtn">إضافة طالب جديد للكشف</button><button class="btn" id="assignmentManagerBtn">إدارة توزيع الطلاب</button><button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button><button class="btn gold" id="manageDocumentsBtn">رفع النماذج الرسمية</button><button class="btn" id="manageSupervisorAccountsBtn">حالة حسابات المشرفين</button>':''}</div><div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadVisits').onclick=loadVisits;$('loadWorkload').onclick=loadWorkloadReport;if($('openSupervisorForms'))$('openSupervisorForms').onclick=loadSupervisorForms;if($('loadEvidence'))$('loadEvidence').onclick=loadEvidence;if($('loadStudentRegistrations'))$('loadStudentRegistrations').onclick=loadStudentRegistrations;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;if($('loadRegistrationRequests'))$('loadRegistrationRequests').onclick=loadRegistrationRequests;if($('rosterImportBtn'))$('rosterImportBtn').onclick=renderRosterImporter;if($('addSingleStudentBtn'))$('addSingleStudentBtn').onclick=renderSingleStudentEntry;if($('assignmentManagerBtn'))$('assignmentManagerBtn').onclick=loadAssignmentManager;if($('manageDocumentsBtn'))$('manageDocumentsBtn').onclick=renderDocumentManager;if($('manageSupervisorAccountsBtn'))$('manageSupervisorAccountsBtn').onclick=renderSupervisorAccountManager;if(currentRole==='supervisor')loadAssigned();
 }else{c.innerHTML=`<p>الحساب مسجل الدخول لكن لم يتم تفعيل دور وظيفي له. تواصل مع الإدارة لتعيين الدور الصحيح.</p>`}
+
+c.insertAdjacentHTML('beforeend', `
+ <section class="card" style="margin-top:18px">
+  <h3>تغيير كلمة المرور</h3>
+  <p class="muted small">يمكنك تغيير كلمة مرور حسابك بعد تسجيل الدخول. استخدم كلمة مرور جديدة لا تقل عن 10 أحرف.</p>
+  <form id="changeOwnPasswordForm">
+   <div class="field"><label for="ownNewPassword">كلمة المرور الجديدة</label><input id="ownNewPassword" type="password" minlength="10" required autocomplete="new-password"></div>
+   <div class="field"><label for="ownConfirmPassword">تأكيد كلمة المرور الجديدة</label><input id="ownConfirmPassword" type="password" minlength="10" required autocomplete="new-password"></div>
+   <button class="btn gold" type="submit">حفظ كلمة المرور الجديدة</button>
+  </form>
+ </section>`);
+const ownPasswordForm=$('changeOwnPasswordForm');
+if(ownPasswordForm) ownPasswordForm.onsubmit=async function(e){
+ e.preventDefault();
+ const next=$('ownNewPassword').value, confirmNext=$('ownConfirmPassword').value;
+ if(next.length<10){showNotice('كلمة المرور يجب ألا تقل عن 10 أحرف.','error');return}
+ if(next!==confirmNext){showNotice('كلمتا المرور غير متطابقتين.','error');return}
+ const button=ownPasswordForm.querySelector('button[type="submit"]'),oldText=button.textContent;
+ button.disabled=true;button.textContent='جارٍ تحديث كلمة المرور...';
+ try{
+  const {data,error}=await sb.auth.updateUser({password:next});
+  if(error)throw error;
+  if(!data?.user)throw new Error('لم يؤكد نظام الحسابات حفظ كلمة المرور الجديدة.');
+  ownPasswordForm.reset();
+  showNotice('تم تغيير كلمة المرور بنجاح. استخدم كلمة المرور الجديدة في المرات القادمة.','success');
+ }catch(err){showNotice(err.message||'تعذر تغيير كلمة المرور. حاول تسجيل الدخول مجددًا ثم أعد المحاولة.','error')}
+ finally{button.disabled=false;button.textContent=oldText}
+};
 }
 
 async function loadAssignmentManager(){
