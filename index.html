@@ -573,10 +573,33 @@ async function renderSingleStudentEntry(){
   const gender=universityNumber.startsWith('122')?'male':'female';
   const btn=$('singleRosterSave');btn.disabled=true;btn.textContent='جارٍ التحقق والحفظ...';
   try{
-   const {data:existing,error:existingError}=await sb.from('eligible_student_roster').select('university_number,full_name,is_active').eq('university_number',universityNumber).maybeSingle();
+   const {data:existing,error:existingError}=await sb.from('eligible_student_roster').select('university_number,full_name,gender,specialty_id,is_active').eq('university_number',universityNumber).maybeSingle();
    if(existingError)throw existingError;
    if(existing){
-    result.innerHTML='<p class="notice show error">الرقم موجود مسبقًا في الكشف '+(existing.is_active?'وهو نشط.':'لكنه غير نشط.')+' '+(existing.full_name? 'الاسم المسجل: '+esc(existing.full_name)+'.':'')+' لم نغيّر أي بيانات.</p>';
+    if(existing.is_active){
+     result.innerHTML='<p class="notice show error">الرقم موجود مسبقًا في الكشف وهو نشط. الاسم المسجل: '+esc(existing.full_name||'—')+'. لم نغيّر أي بيانات؛ يمكن للطالب التسجيل مباشرةً.</p>';
+     return;
+    }
+    const nameMatches=rosterHeaderKey(existing.full_name)===rosterHeaderKey(fullName);
+    const genderMatches=existing.gender===gender;
+    const specialtyMatches=Number(existing.specialty_id)===specialtyId;
+    if(!nameMatches||!genderMatches||!specialtyMatches){
+     const oldSpec=(specialties||[]).find(x=>Number(x.id)===Number(existing.specialty_id));
+     result.innerHTML='<p class="notice show error">الرقم موجود في الكشف لكنه غير نشط، ولم نغيّر أي بيانات. الاسم الرسمي: <strong>'+esc(existing.full_name||'—')+'</strong>، والتخصص المسجل: <strong>'+esc(oldSpec?.name||'غير محدد')+'</strong>. تأكد من مطابقة الاسم والفئة والتخصص مع السجل الرسمي ثم أعد المحاولة.</p>';
+     return;
+    }
+    result.innerHTML='<p class="notice show">هذا الرقم موجود كسجل غير نشط، والاسم والفئة والتخصص تطابق السجل. يمكنك تفعيل السجل الموجود للسماح للطالب بالتسجيل، دون إنشاء رقم مكرر أو اعتماد ساعات التدريب.</p><button type="button" class="btn gold" id="reactivateRosterRecord">تفعيل السجل الموجود</button>';
+    const reactivateBtn=$('reactivateRosterRecord');
+    reactivateBtn.onclick=async()=>{
+     if(!confirm('تأكيد تفعيل السجل الموجود لهذا الطالب؟ لن يُنشأ سجل جديد ولن تُعتمد ساعات التدريب.'))return;
+     reactivateBtn.disabled=true;
+     const {data:changed,error:changeError}=await sb.from('eligible_student_roster').update({is_active:true,added_by:currentSession.user.id}).eq('university_number',universityNumber).eq('is_active',false).select('university_number').maybeSingle();
+     if(changeError){result.innerHTML='<p class="notice show error">تعذر تفعيل السجل: '+esc(changeError.message)+'</p>';return}
+     if(!changed){result.innerHTML='<p class="notice show error">لم يتم تفعيل السجل. ربما تغيّرت حالته؛ أعد تحميل الكشف وتحقق من بياناته.</p>';return}
+     try{sessionStorage.removeItem(draftKey)}catch(_){}
+     result.innerHTML='<p class="notice show success">تم تفعيل السجل الموجود بنجاح. يمكن للطالب التسجيل بنفسه من «تسجيل طالب جديد». لم يتم إنشاء سجل مكرر أو اعتماد ساعات التدريب.</p>';
+     form.reset();genderEl.value='تُحدد تلقائيًا من الرقم الجامعي';
+    };
     return;
    }
    const {data:spec,error:verifySpecError}=await sb.from('specialties').select('id,name,is_active').eq('id',specialtyId).maybeSingle();
