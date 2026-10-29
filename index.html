@@ -81,7 +81,7 @@
     <h3>تسجيل الدخول</h3>
     <form id="loginForm">
      <div class="field"><label for="loginIdentifier">الرقم الجامعي للطالب أو البريد الوظيفي للموظف</label><input id="loginIdentifier" required autocomplete="username" placeholder="الرقم الجامعي أو البريد الوظيفي"></div>
-     <div class="field"><label for="loginPassword">كلمة المرور</label><div class="password-row"><input type="password" id="loginPassword" required autocomplete="current-password"><button class="btn ghost" type="button" id="toggleLoginPassword">إظهار</button></div></div>
+     <div class="field"><label for="loginPassword">كلمة المرور</label><div class="password-row"><input type="password" id="loginPassword" required autocomplete="current-password"><button class="btn ghost" type="button" id="toggleLoginPassword" onclick="return togglePasswordVisibility('loginPassword','toggleLoginPassword',event)">إظهار</button></div></div>
      <button class="btn" type="submit">دخول</button>
     </form>
    </div>
@@ -95,7 +95,7 @@
      <div class="field"><label for="signupArea">منطقة التدريب</label><select id="signupArea" required><option value="">اختر المنطقة</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
      <div class="field"><label for="specialty">التخصص</label><select id="specialty" required><option value="">تحميل التخصصات…</option></select></div>
      <div class="field"><label for="signupSupervisor">المشرف</label><select id="signupSupervisor" required disabled><option value="">اختر المنطقة والتخصص أولًا</option></select><p class="field-help">ستظهر فقط الأسماء المطابقة للمنطقة والتخصص وفئة الطالب/الطالبة بعد تحميل القائمة الرسمية للمشرفين.</p></div>
-     <div class="field"><label for="signupPassword">كلمة المرور (8 أحرف على الأقل)</label><div class="password-row"><input type="password" id="signupPassword" minlength="8" required autocomplete="new-password"><button class="btn ghost" type="button" id="toggleSignupPassword">إظهار</button></div></div>
+     <div class="field"><label for="signupPassword">كلمة المرور (8 أحرف على الأقل)</label><div class="password-row"><input type="password" id="signupPassword" minlength="8" required autocomplete="new-password"><button class="btn ghost" type="button" id="toggleSignupPassword" onclick="return togglePasswordVisibility('signupPassword','toggleSignupPassword',event)">إظهار</button></div></div>
      <button class="btn gold" type="submit">إنشاء حساب الطالب</button>
     </form>
    </div>
@@ -124,6 +124,20 @@ const SUPABASE_URL='https://qnoabewngjmnhntjyepe.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_O28XTWBruit3W6Q8O1VOTA_3hEZJK2E';
 const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 const $=id=>document.getElementById(id);
+
+function togglePasswordVisibility(inputId,buttonId,event){
+ if(event){event.preventDefault();event.stopPropagation();}
+ const input=document.getElementById(inputId);
+ const button=document.getElementById(buttonId);
+ if(!input||!button)return false;
+ const show=input.type==='password';
+ input.type=show?'text':'password';
+ button.textContent=show?'إخفاء':'إظهار';
+ button.setAttribute('aria-controls',inputId);
+ button.setAttribute('aria-pressed',String(show));
+ input.focus({preventScroll:true});
+ return false;
+}
 let currentSession=null,currentRole=null,currentStudentSpecialtyName='',currentSupervisorRecords=[];
 let authLoginMode='general';
 const showNotice=(msg,type='')=>{const n=$('notice');n.textContent=msg;n.className='notice show '+type;n.scrollIntoView({behavior:'smooth',block:'nearest'})};
