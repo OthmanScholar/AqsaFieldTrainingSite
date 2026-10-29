@@ -1,0 +1,6 @@
+# Supabase CLI configuration for this project.
+# The department-head-auth function validates the submitted email/password
+# against Supabase Auth itself and then checks the authenticated user's role.
+# It must therefore accept the initial unauthenticated login request.
+[functions.department-head-auth]
+verify_jwt = false
