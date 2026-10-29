@@ -458,7 +458,7 @@ async function loadAssignmentManager(){
   const entityMap=new Map(entities.map(x=>[String(x.id),x.name]));
   const staffMap=new Map(staff.map(x=>[x.user_id,x.full_name]));
   const studentMap=new Map(students.map(x=>[x.user_id,x]));
-  const eligible=students.filter(x=>x.eligibility_status==='approved'&&Number(x.completed_hours||0)>=36&&x.specialty_id);
+  const eligible=students.filter(x=>x.specialty_id&&((x.eligibility_status==='approved'&&Number(x.completed_hours||0)>=36)||x.eligibility_status==='exception_approved'));
   const activeAssignments=assignments.filter(a=>staffMap.has(a.supervisor_user_id));
   body.innerHTML='<p><strong>الطلاب المؤهلون:</strong> '+eligible.length+' — <strong>حسابات المشرفين النشطة المرتبطة:</strong> '+staff.length+' — <strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p>'+
    (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة في staff_directory. لن نعرض الأسماء العامة كأنها حسابات دخول، ولن ننشئ تكليفًا غير قابل للربط.</p>':'')+
