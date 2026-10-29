@@ -890,31 +890,50 @@ async function loadEvidence(){
 }
 async function loadStudentRegistrations(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('مراجعة تسجيل الطلاب متاحة لرئيس القسم والإدارة فقط.','error');return}
- const out=$('staffResults');out.innerHTML='<p>جارٍ تحميل تسجيلات الطلاب وحالة مطابقتها للكشف...</p>';
- const [profilesResult,specialtiesResult,rosterResult]=await Promise.all([
-  sb.from('student_profiles').select('user_id,full_name,university_number,gender,specialty_id,student_area,supervisor_name,registration_status,registration_review_note,registration_reviewed_at,created_at').order('created_at',{ascending:false}).limit(500),
+ const out=$('staffResults');out.innerHTML='<p>جارٍ تحميل تسجيلات الطلاب والمشرفين المناسبين...</p>';
+ const [profilesResult,specialtiesResult,rosterResult,supervisorsResult]=await Promise.all([
+  sb.from('student_profiles').select('user_id,full_name,university_number,gender,specialty_id,student_area,supervisor_name,supervisor_phone,registration_status,registration_review_note,registration_reviewed_at,created_at').order('created_at',{ascending:false}).limit(500),
   sb.from('specialties').select('id,name'),
-  sb.from('eligible_student_roster').select('university_number,full_name,gender,specialty_id,is_active').limit(5000)
+  sb.from('eligible_student_roster').select('university_number,full_name,gender,specialty_id,is_active').limit(5000),
+  sb.from('public_supervisors').select('id,name,phone,region,category,specialty,is_active').eq('is_active',true).order('name').limit(500)
  ]);
- const err=profilesResult.error||specialtiesResult.error||rosterResult.error;
+ const err=profilesResult.error||specialtiesResult.error||rosterResult.error||supervisorsResult.error;
  if(err){out.innerHTML='<p class="notice show error">تعذر تحميل مراجعة التسجيلات: '+esc(err.message)+'</p>';return}
  const profiles=profilesResult.data||[],specialties=new Map((specialtiesResult.data||[]).map(x=>[String(x.id),x.name]));
  const rosterMap=new Map((rosterResult.data||[]).map(x=>[x.university_number,x]));
+ const supervisors=supervisorsResult.data||[];
  const pendingCount=profiles.filter(x=>(x.registration_status||'pending')==='pending').length;
  const approvedCount=profiles.filter(x=>x.registration_status==='approved').length;
  const rejectedCount=profiles.filter(x=>x.registration_status==='rejected').length;
  if(!profiles.length){out.innerHTML='<h3>مراجعة تسجيل الطلاب الجدد</h3><p class="muted">لا توجد حسابات طلاب مسجلة حتى الآن.</p>';return}
  const stateLabel=s=>s==='approved'?'معتمد':s==='rejected'?'مرفوض':'قيد المراجعة';
- const stateClass=s=>s==='approved'?'success':s==='rejected'?'error':'';
- out.innerHTML='<div class="card"><h3>مراجعة تسجيل الطلاب الجدد</h3><p class="muted">هذا القرار يعتمد تسجيل الحساب في القسم فقط، ولا يعتمد ساعات التدريب. اعتماد الساعات له شاشة مستقلة.</p><p><strong>إجمالي الحسابات:</strong> '+profiles.length+' — <strong>قيد المراجعة:</strong> '+pendingCount+' — <strong>معتمدة:</strong> '+approvedCount+' — <strong>مرفوضة:</strong> '+rejectedCount+'</p><div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>منطقة التدريب</th><th>المشرف المختار عند التسجيل</th><th>مطابقة كشف القسم</th><th>حالة التسجيل</th><th>ملاحظة القسم</th><th>الإجراء</th></tr></thead><tbody>'+profiles.map(p=>{
+ out.innerHTML='<div class="card"><h3>مراجعة تسجيل الطلاب الجدد</h3><p class="muted">اختر المشرف المناسب واحفظه في ملف الطالب. حفظ اختيار المشرف لا ينشئ تكليفًا رسميًا ولا يعتمد ساعات التدريب.</p><p><strong>إجمالي الحسابات:</strong> '+profiles.length+' — <strong>قيد المراجعة:</strong> '+pendingCount+' — <strong>معتمدة:</strong> '+approvedCount+' — <strong>مرفوضة:</strong> '+rejectedCount+'</p><div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>منطقة التدريب</th><th>المشرف المختار / تعديل الاختيار</th><th>مطابقة كشف القسم</th><th>حالة التسجيل</th><th>ملاحظة القسم</th><th>الإجراء</th></tr></thead><tbody>'+profiles.map(p=>{
   const status=p.registration_status||'pending',roster=rosterMap.get(p.university_number);
+  const specialtyName=specialties.get(String(p.specialty_id))||'';
   const rosterMatches=!!roster&&roster.is_active===true&&roster.gender===p.gender&&(roster.specialty_id==null||String(roster.specialty_id)===String(p.specialty_id));
   const rosterLabel=!roster?'الرقم غير موجود في الكشف':!roster.is_active?'الرقم غير نشط في الكشف':!rosterMatches?'بيانات الفئة/التخصص لا تطابق الكشف':'مطابق ونشط';
+  const suitable=supervisors.filter(s=>s.is_active!==false&&signupCategoryMatches(p.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)&&(!p.student_area||signupRegionMatches(p.student_area,s.region)));
+  const options='<option value="">'+(p.supervisor_name?'اختر لتغيير المشرف':'اختر المشرف المناسب')+'</option>'+suitable.map(s=>'<option value="'+s.id+'" '+(p.supervisor_name===s.name?'selected':'')+'>'+esc(s.name)+' — '+esc(s.region||'منطقة غير محددة')+'</option>').join('');
+  const supervisorCell='<div class="field" style="min-width:230px"><select id="supervisorChoice_'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>'+options+'</select><div class="muted small">'+(p.supervisor_name?'المحفوظ حاليًا: '+esc(p.supervisor_name):suitable.length?'لم يُحفظ مشرف بعد':'لا يوجد مشرف نشط مطابق للتخصص والفئة والمنطقة')+'</div><button class="btn gold" type="button" data-save-supervisor="'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>حفظ اختيار المشرف</button></div>';
   const actions=status==='pending'
     ? (rosterMatches?'<button class="btn gold" data-student-review="'+esc(p.user_id)+'" data-status="approved">اعتماد التسجيل</button> ':'<span class="muted small">لا يمكن الاعتماد قبل تصحيح مطابقة الكشف.</span> ')+'<button class="btn ghost" data-student-review="'+esc(p.user_id)+'" data-status="rejected">رفض التسجيل</button>'
     : '<span class="status">'+stateLabel(status)+'</span>';
-  return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialties.get(String(p.specialty_id))||'—')+'</td><td>'+esc(p.student_area||'—')+'</td><td>'+esc(p.supervisor_name||'لم يختر مشرفًا')+'</td><td>'+esc(rosterLabel)+'</td><td>'+esc(stateLabel(status))+'</td><td>'+esc(p.registration_review_note||'—')+'</td><td>'+actions+'</td></tr>';
+  return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialtyName||'—')+'</td><td>'+esc(p.student_area||'غير محددة')+'</td><td>'+supervisorCell+'</td><td>'+esc(rosterLabel)+'</td><td>'+esc(stateLabel(status))+'</td><td>'+esc(p.registration_review_note||'—')+'</td><td>'+actions+'</td></tr>';
  }).join('')+'</tbody></table></div></div>';
+ out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
+  const studentUserId=btn.dataset.saveSupervisor;
+  const select=document.getElementById('supervisorChoice_'+studentUserId);
+  const supervisorId=Number(select?.value);
+  if(!supervisorId){showNotice('اختر مشرفًا مناسبًا أولًا.','error');return}
+  const chosen=supervisors.find(s=>s.id===supervisorId);
+  if(!chosen){showNotice('المشرف المختار غير موجود في القائمة الحالية. أعد تحميل البيانات.','error');return}
+  if(!confirm('حفظ '+chosen.name+' مشرفًا مختارًا لهذا الطالب؟\nهذا يحفظ الاختيار فقط ولا ينشئ تكليفًا رسميًا.'))return;
+  btn.disabled=true;
+  const {error:saveError}=await sb.rpc('set_student_registration_supervisor',{p_student_user_id:studentUserId,p_supervisor_id:supervisorId});
+  if(saveError){showNotice('تعذر حفظ اختيار المشرف: '+saveError.message,'error');btn.disabled=false;return}
+  showNotice('تم حفظ المشرف المختار في ملف الطالب. التكليف الرسمي ما زال منفصلًا.','success');
+  await loadStudentRegistrations();
+ });
  out.querySelectorAll('[data-student-review]').forEach(btn=>btn.onclick=async()=>{
   const status=btn.dataset.status,studentUserId=btn.dataset.studentReview;
   let note=null;
