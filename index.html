@@ -516,22 +516,27 @@ async function previewRosterFile(){
    if(!specialtyId)rowIssues.push('التخصص غير مطابق لقائمة النظام');
    let isActive=mapped.active?trueValues.includes(activeText):true;
    if(mapped.active&&falseValues.includes(activeText))isActive=false;
-   if(hoursValue!==null&&Number.isFinite(hoursValue)&&hoursValue<36){isActive=false;rowWarnings.push('أقل من 36 ساعة؛ سيُحفظ السجل غير نشط');}
-   if((gender==='male'&&!number.startsWith('122'))||(gender==='female'&&!number.startsWith('222'))){
+   let skipImport=false;
+   const expectedGender=number.startsWith('122')?'male':number.startsWith('222')?'female':'';
+   if(!expectedGender||expectedGender!==gender){
     isActive=false;
-    rowWarnings.push('بادئة الرقم لا تطابق قاعدة التسجيل الحالية؛ سيُحفظ غير نشط للمراجعة');
+    skipImport=true;
+    rowWarnings.push('بادئة الرقم أو فئة الطالب لا تطابق قاعدة التسجيل الحالية؛ استُبعد من الاستيراد لحين المراجعة');
    }
+   if(hoursValue!==null&&Number.isFinite(hoursValue)&&hoursValue<36){isActive=false;rowWarnings.push('أقل من 36 ساعة؛ سيُحفظ السجل غير نشط');}
    if(rowIssues.length)issues.push({line,number,name,issues:rowIssues});
-   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,is_active:isActive,added_by:currentSession.user.id,_line:line,_issues:rowIssues,_warnings:rowWarnings});
+   rows.push({university_number:number,full_name:name,gender,specialty_id:specialtyId||null,is_active:isActive,added_by:currentSession.user.id,_line:line,_issues:rowIssues,_warnings:rowWarnings,_skipImport:skipImport});
   });
   window.__rosterImportRows=rows;
-  const valid=rows.filter(x=>!x._issues.length);
+  const valid=rows.filter(x=>!x._issues.length&&!x._skipImport);
   const inactiveCount=valid.filter(x=>x.is_active!==true).length;
+  const excludedCount=rows.filter(x=>x._skipImport&&!x._issues.length).length;
   const warnedRows=valid.filter(x=>x._warnings?.length);
-  out.innerHTML='<p><strong>عدد الصفوف:</strong> '+rows.length+' — <strong>صالحة للاستيراد:</strong> '+valid.length+' — <strong>تحتاج تصحيحًا:</strong> '+issues.length+' — <strong>ستُحفظ غير نشطة:</strong> '+inactiveCount+'</p>'+
-   (issues.length?'<div class="tablewrap"><table><thead><tr><th>صف Excel</th><th>الرقم</th><th>الاسم</th><th>المشكلات</th></tr></thead><tbody>'+issues.slice(0,100).map(x=>'<tr><td>'+x.line+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.issues.join('، '))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="notice show success">اجتاز الكشف الفحص الأولي.</p>')+
-   (warnedRows.length?'<p class="notice show">تنبيه: '+warnedRows.length+' سجلًا سيُحفظ غير نشط بسبب عدد الساعات أو بادئة الرقم، ولن يُسمح له بالتسجيل قبل المراجعة.</p>':'')+
-   '<p class="muted small">المعاينة لا تحفظ شيئًا. ستُحدّث الأرقام الموجودة مسبقًا عند الاستيراد؛ الصفوف غير النشطة تبقى محفوظة للمراجعة ولا تُفتح لها إمكانية التسجيل.</p>'+
+  out.innerHTML='<p><strong>صفوف الكشف:</strong> '+rows.length+' — <strong>صالحة للاستيراد:</strong> '+valid.length+' — <strong>أخطاء تحتاج تصحيحًا:</strong> '+issues.length+' — <strong>غير نشطة:</strong> '+inactiveCount+' — <strong>مستبعدة للمراجعة:</strong> '+excludedCount+'</p>'+
+   (issues.length?'<div class="tablewrap"><table><thead><tr><th>صف Excel</th><th>الرقم</th><th>الاسم</th><th>المشكلات</th></tr></thead><tbody>'+issues.slice(0,100).map(x=>'<tr><td>'+x.line+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.issues.join('، '))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="notice show success">اجتاز الكشف فحص الأخطاء الأساسية.</p>')+
+   (warnedRows.length?'<p class="notice show">تنبيه: '+warnedRows.length+' سجلًا سيُحفظ غير نشط بسبب عدم استيفاء 36 ساعة.</p>':'')+
+   (excludedCount?'<p class="notice show">تم استبعاد '+excludedCount+' سجلًا من الحفظ لأن بادئة الرقم أو فئة الطالب لا تطابق قاعدة النظام. راجعها دون تغيير الأرقام تلقائيًا.</p>':'')+
+   '<p class="muted small">المعاينة لا تحفظ شيئًا. ستُحدّث الأرقام المطابقة الموجودة مسبقًا؛ غير المؤهلين يُحفظون غير نشطين.</p>'+
    '<button class="btn gold" id="confirmRosterImport" type="button" '+(valid.length&&!issues.length?'':'disabled')+'>استيراد '+valid.length+' طالب (منهم '+inactiveCount+' غير نشط)</button>';
   const btn=$('confirmRosterImport');if(btn)btn.onclick=()=>commitRosterImport(rows);
  }catch(err){out.innerHTML='<p class="notice show error">'+esc(err.message||'تعذر قراءة الملف.')+'</p>'}
@@ -539,9 +544,11 @@ async function previewRosterFile(){
 async function commitRosterImport(rows){
  if(!['admin','department_head'].includes(currentRole)){showNotice('الاستيراد متاح لرئيس القسم أو الإدارة فقط.','error');return}
  if(!Array.isArray(rows)||!rows.length||rows.some(x=>x._issues?.length)){showNotice('صحّح جميع أخطاء الكشف قبل الاستيراد.','error');return}
- if(!confirm('سيتم حفظ '+rows.length+' سجلًا في كشف الطلاب المؤهلين. الأرقام الموجودة قد تُحدّث بياناتها. هل تتابع؟'))return;
+ const toImport=rows.filter(x=>!x._skipImport&&!x._issues?.length);
+ if(!toImport.length){showNotice('لا توجد سجلات يمكن استيرادها بعد استبعاد الأرقام غير المطابقة.','error');return}
+ if(!confirm('سيتم حفظ '+toImport.length+' سجلًا في كشف الطلاب المؤهلين. الأرقام الموجودة قد تُحدّث بياناتها، والسجلات غير المستوفية تُحفظ غير نشطة. هل تتابع؟'))return;
  const btn=$('confirmRosterImport');if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ…'}
- const payload=rows.map(({_line,_issues,_warnings,...x})=>x);
+ const payload=toImport.map(({_line,_issues,_warnings,_skipImport,...x})=>x);
  try{
   const {error}=await sb.from('eligible_student_roster').upsert(payload,{onConflict:'university_number'});
   if(error)throw error;
