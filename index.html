@@ -431,6 +431,35 @@ function renderSupervisorRows(rows){
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function safeUrl(u){try{const x=new URL(u);return ['https:','http:'].includes(x.protocol)?x.href:'#'}catch{return '#'}}
+function showRecoveryForm(){
+ hidePanels();
+ $('authPanel').classList.remove('hidden');
+ $('loginView').classList.add('hidden');
+ $('signupView').classList.add('hidden');
+ $('supervisorSignupView').classList.add('hidden');
+ $('resetView').classList.remove('hidden');
+ $('resetView').innerHTML=`<h3>تعيين كلمة مرور جديدة</h3><p class="field-help">أدخل كلمة مرور جديدة لحساب رئيس القسم. يجب ألا تقل عن 10 أحرف.</p><form id="recoveryPasswordForm"><div class="field"><label for="recoveryNewPassword">كلمة المرور الجديدة</label><input id="recoveryNewPassword" type="password" minlength="10" required autocomplete="new-password"></div><div class="field"><label for="recoveryConfirmPassword">تأكيد كلمة المرور</label><input id="recoveryConfirmPassword" type="password" minlength="10" required autocomplete="new-password"></div><button class="btn" type="submit">حفظ كلمة المرور الجديدة</button></form>`;
+ $('authPanel').scrollIntoView({behavior:'smooth',block:'start'});
+ $('recoveryPasswordForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const next=$('recoveryNewPassword').value,confirmNext=$('recoveryConfirmPassword').value;
+  if(next.length<10){showNotice('كلمة المرور يجب ألا تقل عن 10 أحرف.','error');return}
+  if(next!==confirmNext){showNotice('كلمتا المرور غير متطابقتين.','error');return}
+  const button=e.submitter||$('recoveryPasswordForm').querySelector('button[type="submit"]');
+  if(button){button.disabled=true;button.textContent='جارٍ حفظ كلمة المرور...'}
+  try{
+   const {data,error}=await sb.auth.updateUser({password:next});
+   if(error)throw error;
+   if(!data?.user)throw new Error('لم يؤكد نظام الحسابات حفظ كلمة المرور الجديدة.');
+   history.replaceState(null,'',window.location.pathname+window.location.search);
+   showNotice('تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بالبريد الوظيفي وكلمة المرور الجديدة.','success');
+   $('resetView').innerHTML='<h3>تم تحديث كلمة المرور</h3><p>ارجع إلى تسجيل دخول رئيس القسم واستخدم كلمة المرور الجديدة.</p><button class="btn" type="button" id="recoveryBackToLogin">العودة لتسجيل الدخول</button>';
+   $('recoveryBackToLogin').onclick=()=>{toggleAuthView('login');$('headLogin').click()};
+   await refreshSession();
+  }catch(err){showNotice(err.message||'تعذر تغيير كلمة المرور. افتح رابط الاستعادة الجديد وحاول مجددًا.','error')}
+  finally{if(button){button.disabled=false;button.textContent='حفظ كلمة المرور الجديدة'}}
+ });
+}
 function toggleAuthView(view){
  $('loginView').classList.toggle('hidden',view!=='login');
  $('signupView').classList.toggle('hidden',view!=='signup');
@@ -1308,7 +1337,7 @@ async function loadPasswordResetRequests(){
   });
  }catch(err){r.textContent=err.message||'تعذر تحميل طلبات الاسترجاع.'}
 }
-async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();sb.auth.onAuthStateChange(()=>refreshSession())}
+async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession();sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')showRecoveryForm();refreshSession()});if(new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery')showRecoveryForm()}
 init();
 </script>
 </body></html>
