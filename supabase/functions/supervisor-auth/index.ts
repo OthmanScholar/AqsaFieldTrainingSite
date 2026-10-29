@@ -83,6 +83,47 @@ Deno.serve(async (req: Request) => {
       return reply({ saved: true, message: "تم حفظ الهوية في السجل الخاص. لم يُنشأ حساب دخول بعد." });
     }
 
+    if (action === "reset_password") {
+      const head = await authorizeDepartmentHead(admin, req);
+      if (!head.ok) return reply({ error: head.message }, head.status);
+      const supervisorId = Number(body?.supervisor_id);
+      if (!Number.isInteger(supervisorId) || supervisorId <= 0) {
+        return reply({ error: "حدد سجل المشرف الصحيح." }, 400);
+      }
+      const { data: records, error: lookupError } = await admin.rpc("list_supervisor_account_status");
+      if (lookupError || !Array.isArray(records)) {
+        console.error("supervisor reset lookup failed", lookupError?.message || "invalid result");
+        return reply({ error: "تعذر التحقق من حساب المشرف." }, 500);
+      }
+      const supervisor = records.find((item: any) => Number(item.supervisor_id) === supervisorId);
+      if (!supervisor || supervisor.supervisor_active !== true || !supervisor.account_user_id) {
+        return reply({ error: "لا يوجد حساب مرتبط ونشط لهذا المشرف." }, 404);
+      }
+      const { data: linkedUser, error: userError } = await admin.auth.admin.getUserById(String(supervisor.account_user_id));
+      if (userError || !linkedUser?.user) {
+        return reply({ error: "تعذر العثور على حساب الدخول المرتبط." }, 404);
+      }
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+      const random = new Uint8Array(24);
+      crypto.getRandomValues(random);
+      let temporaryPassword = "";
+      for (const byte of random) temporaryPassword += alphabet[byte % alphabet.length];
+      const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(String(supervisor.account_user_id), {
+        password: temporaryPassword,
+        user_metadata: { ...(linkedUser.user.user_metadata || {}), must_change_password: true },
+      });
+      if (updateError || !updated?.user) {
+        console.error("supervisor temporary password reset failed", updateError?.message || "missing user");
+        return reply({ error: "تعذر تعيين كلمة المرور المؤقتة." }, 500);
+      }
+      return reply({
+        reset: true,
+        supervisor_name: supervisor.supervisor_name,
+        temporary_password: temporaryPassword,
+        message: "تم إصدار كلمة مرور مؤقتة للحساب المرتبط.",
+      });
+    }
+
     if (action === "signup") {
       const fullName = String(body?.full_name || "").trim();
       const nationalId = String(body?.national_id || body?.identifier || "").replace(/\D/g, "");
