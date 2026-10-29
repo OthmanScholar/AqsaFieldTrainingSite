@@ -461,7 +461,7 @@ async function loadAssignmentManager(){
   const eligible=students.filter(x=>x.specialty_id&&((x.eligibility_status==='approved'&&Number(x.completed_hours||0)>=36)||x.eligibility_status==='exception_approved'));
   const activeAssignments=assignments.filter(a=>staffMap.has(a.supervisor_user_id));
   body.innerHTML='<p><strong>الطلاب المؤهلون:</strong> '+eligible.length+' — <strong>حسابات المشرفين النشطة المرتبطة:</strong> '+staff.length+' — <strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p>'+
-   (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة في staff_directory. لن نعرض الأسماء العامة كأنها حسابات دخول، ولن ننشئ تكليفًا غير قابل للربط.</p>':'')+
+   (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة بدليل المشرفين حتى الآن. اربط الحسابات المعتمدة أولًا، ثم أعد تحميل إدارة التوزيع.</p>':'')+
    '<form id="assignmentForm" class="form-grid"><label>الطالب المؤهل<select id="assignStudent" required><option value="">اختر الطالب</option>'+eligible.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name+' — '+x.university_number+' — '+(specMap.get(String(x.specialty_id))||'تخصص غير معروف'))+'</option>').join('')+'</select></label><label>المشرف صاحب الحساب النشط<select id="assignSupervisor" required disabled><option value="">اختر الطالب أولًا</option></select></label><label>جهة التدريب<select id="assignEntity"><option value="">لم تُحدد بعد</option>'+entities.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')+'</select></label><div><button class="btn gold" type="submit" '+(!eligible.length||!staff.length?'disabled':'')+'>حفظ التكليف الرسمي</button></div></form>'+
    '<h4>التكليفات الحالية</h4><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>المشرف</th><th>جهة التدريب</th></tr></thead><tbody>'+
    activeAssignments.map(a=>{const p=studentMap.get(a.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(a.specialty_id))||'—')+'</td><td>'+esc(staffMap.get(a.supervisor_user_id)||'—')+'</td><td>'+esc(entityMap.get(String(a.training_entity_id))||'لم تحدد')+'</td></tr>'}).join('')+'</tbody></table></div>';
@@ -765,7 +765,16 @@ async function loadSupervisorForms(){
  student.onchange=()=>{const opt=student.options[student.selectedIndex];if(opt?.dataset.specialty)specialty.value=opt.dataset.specialty;renderForm()};
  specialty.onchange=renderForm;type.onchange=renderForm;
  function renderForm(){
-  const area=$('sfFormArea'),name=specialty.value,kind=type.value,templateName=({'تكنولوجيا المعلومات والاتصالات':'تكنولوجيا المعلومات','علوم التربية البدنية':'التربية الرياضية','السكرتاريا الدولية':'السكرتارية الدولية'})[name]||name,template=supervisorFormTemplates[templateName];
+  const area=$('sfFormArea'),name=specialty.value,kind=type.value,templateName=({
+   'تكنولوجيا المعلومات والاتصالات':'تكنولوجيا المعلومات',
+   'برمجة تطبيقات الهواتف الذكية':'تكنولوجيا المعلومات',
+   'أمن المعلومات':'تكنولوجيا المعلومات',
+   'التصميم الجرافيكي':'تكنولوجيا المعلومات',
+   'علوم التربية البدنية':'التربية الرياضية',
+   'السكرتاريا الدولية':'السكرتارية الدولية',
+   'العلاقات العامة والإعلام':'الصحافة الإلكترونية',
+   'إدارة الأعمال':'العلوم المالية والمصرفية'
+  })[name]||name,template=supervisorFormTemplates[templateName];
   if(!student.value){area.innerHTML='<p class="muted">اختر الطالب أولًا.</p>';return}
   if(kind==='signature'){
    area.innerHTML='<h4>تقييم كشف التوقيعات</h4><p class="muted small">أدخل الدرجة بعد التحقق من كشف التوقيعات الأصلي. الحد الأعلى 10 درجات؛ لا تُعتمد الدرجة دون مراجعة المستند.</p><form id="sfSignatureForm"><label>الدرجة من 10<input id="sfSignatureScore" type="number" min="0" max="10" step="0.5" value="0" required></label><label>ملاحظات المقيم<textarea id="sfSignatureNotes" rows="3" placeholder="ملاحظات مختصرة (اختياري)"></textarea></label><div class="service-buttons"><button class="btn gold" type="button" id="sfSignatureSave">حفظ تقييم كشف التوقيعات</button><button class="btn" type="button" id="sfSignaturePrint">طباعة</button></div></form>';
