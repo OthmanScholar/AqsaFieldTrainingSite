@@ -72,18 +72,30 @@
  <div id="notice" class="notice" role="status" aria-live="polite"></div>
  <section id="authPanel" class="panel hidden">
    <h2>بوابة الطالب والتدريب الميداني</h2>
-   <p class="muted small">الطالب يدخل برقمه الجامعي وكلمة المرور. موظفو القسم والمشرفون يمكنهم استخدام البريد الوظيفي المرتبط بحساباتهم. لا تنشئ هذه الصفحة حسابات للمشرفين أو الإدارة.</p>
+   <p class="muted small">الطالب يدخل برقمه الجامعي. يستطيع المشرف إنشاء حسابه من الخيار المخصص بعد تسجيل رقم هويته لدى رئيس القسم، بينما يستخدم موظفو القسم حساباتهم الوظيفية المعتادة.</p>
    <div class="auth-tabs">
     <button class="btn" type="button" id="showLoginBtn">تسجيل الدخول</button>
     <button class="btn gold" type="button" id="showSignupBtn">تسجيل طالب جديد</button>
     <button class="btn ghost" type="button" id="showResetBtn">نسيت كلمة المرور؟</button>
+    <button class="btn ghost hidden" type="button" id="showSupervisorSignupBtn">إنشاء حساب مشرف</button>
    </div>
    <div id="loginView" class="auth-view">
     <h3>تسجيل الدخول</h3>
     <form id="loginForm">
-     <div class="field"><label for="loginIdentifier">الرقم الجامعي للطالب أو البريد الوظيفي للموظف</label><input id="loginIdentifier" required autocomplete="username" placeholder="الرقم الجامعي أو البريد الوظيفي"></div>
+     <div class="field"><label id="loginIdentifierLabel" for="loginIdentifier">الرقم الجامعي للطالب أو البريد الوظيفي للموظف</label><input id="loginIdentifier" required autocomplete="username" placeholder="الرقم الجامعي أو البريد الوظيفي"></div>
      <div class="field"><label for="loginPassword">كلمة المرور</label><div class="password-row"><input type="password" id="loginPassword" required autocomplete="current-password"><button class="btn ghost" type="button" id="toggleLoginPassword" onclick="return togglePasswordVisibility('loginPassword','toggleLoginPassword',event)">إظهار</button></div></div>
      <button class="btn" type="submit">دخول</button>
+    </form>
+   </div>
+   <div id="supervisorSignupView" class="auth-view hidden">
+    <h3>إنشاء حساب مشرف</h3>
+    <p class="field-help">يجب أن تكون هويتك مسجلة في سجل المشرفين لدى رئيس القسم، وأن يطابق الاسم السجل المعتمد. استخدم كلمة مرور خاصة بك لا تقل عن 10 أحرف.</p>
+    <form id="supervisorSignupForm">
+     <div class="field"><label for="supervisorFullName">الاسم كما هو في سجل القسم</label><input id="supervisorFullName" required autocomplete="name" maxlength="160"></div>
+     <div class="field"><label for="supervisorNationalId">رقم الهوية الوطنية</label><input id="supervisorNationalId" required inputmode="numeric" pattern="[0-9]{7,12}" minlength="7" maxlength="12" autocomplete="off" placeholder="أدخل رقم الهوية دون مسافات"></div>
+     <div class="field"><label for="supervisorSignupPassword">كلمة المرور الجديدة (10 أحرف على الأقل)</label><input id="supervisorSignupPassword" type="password" minlength="10" required autocomplete="new-password"></div>
+     <div class="field"><label for="supervisorConfirmPassword">تأكيد كلمة المرور</label><input id="supervisorConfirmPassword" type="password" minlength="10" required autocomplete="new-password"></div>
+     <button class="btn gold" type="submit">إنشاء حساب المشرف</button>
     </form>
    </div>
    <div id="signupView" class="auth-view hidden">
@@ -173,9 +185,9 @@ const result = await studentAuthRequest(
 const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};const target=map[where]?$(map[where]):null;if(target){target.classList.remove('hidden');target.scrollIntoView({behavior:'smooth',block:'start'});}if(where==='documents')loadDocuments();if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>{authLoginMode='general';$('loginView').querySelector('h3').textContent='تسجيل الدخول';$('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth')}));
-$('headLogin').addEventListener('click',()=>{authLoginMode='department_head';toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول رئيس القسم';$('loginIdentifier').placeholder='البريد الوظيفي لرئيس القسم';go('auth');$('loginIdentifier').focus({preventScroll:true})});
-$('supervisorLogin').addEventListener('click',()=>{authLoginMode='supervisor';toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';$('loginIdentifier').placeholder='رقم الهوية الوطنية للمشرف';go('auth');$('loginIdentifier').focus({preventScroll:true})});
+document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>{authLoginMode='general';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل الدخول';$('loginIdentifierLabel').textContent='الرقم الجامعي للطالب أو البريد الوظيفي للموظف';$('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth')}));
+$('headLogin').addEventListener('click',()=>{authLoginMode='department_head';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول رئيس القسم';$('loginIdentifierLabel').textContent='البريد الوظيفي لرئيس القسم';$('loginIdentifier').placeholder='البريد الوظيفي لرئيس القسم';go('auth');$('loginIdentifier').focus({preventScroll:true})});
+$('supervisorLogin').addEventListener('click',()=>{authLoginMode='supervisor';$('showSupervisorSignupBtn').classList.remove('hidden');$('showSignupBtn').classList.add('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';$('loginIdentifierLabel').textContent='رقم الهوية الوطنية للمشرف';$('loginIdentifier').placeholder='رقم الهوية الوطنية للمشرف';go('auth');$('loginIdentifier').focus({preventScroll:true})});
 if($('authToggle'))$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 let entityDirectoryRows=[];
@@ -223,11 +235,29 @@ async function renderSupervisorAccountManager(){
   const result=await studentAuthRequest({action:'list_account_status'},currentSession.access_token,'supervisor-auth');
   const rows=result.supervisors||[];
   if(!rows.length){out.textContent='لا توجد سجلات مشرفين في الدليل.';return}
-  const status=x=>!x.active?'غير نشط':x.account_linked?'حساب مرتبط':x.national_id_registered?'الهوية مسجلة — يحتاج ربط الحساب':'الهوية غير مكتملة — يحتاج مراجعة القسم';
-  out.innerHTML='<p><strong>عدد المشرفين:</strong> '+rows.length+' — <strong>حسابات مرتبطة:</strong> '+rows.filter(x=>x.account_linked).length+' — <strong>تحتاج ربطًا:</strong> '+rows.filter(x=>x.active&&!x.account_linked&&x.national_id_registered).length+'</p><div class="tablewrap"><table><thead><tr><th>المشرف</th><th>التخصص</th><th>الفئة</th><th>المنطقة</th><th>الحساب</th><th>الهوية الخاصة</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.category||'—')+'</td><td>'+esc(x.region||'—')+'</td><td>'+esc(x.account_linked?'مرتبط':'غير مرتبط')+'</td><td>'+esc(x.national_id_registered?'مسجلة في السجل الخاص':'تحتاج مراجعة')+'</td></tr>').join('')+'</tbody></table></div><p class="muted small">لأمان الحسابات، لا يظهر رقم الهوية في هذه الشاشة. إنشاء حساب جديد يتطلب ربطًا معتمدًا والتحقق من الهوية أولًا.</p>';
+  const needsIdentity=rows.filter(x=>x.active&&!x.account_linked&&!x.national_id_registered);
+  const identitySetup=needsIdentity.length
+   ? '<div class="card"><h4>تسجيل هوية مشرف في السجل الخاص</h4><p class="muted small">هذه الخطوة لرئيس القسم فقط، ولا تنشئ حسابًا. بعد حفظ الهوية يستطيع المشرف إنشاء حسابه بنفسه. لا تُعرض الهوية المحفوظة مرة أخرى.</p><form id="supervisorIdentityForm"><div class="field"><label for="supervisorIdentitySupervisor">المشرف الذي يحتاج تسجيل الهوية</label><select id="supervisorIdentitySupervisor" required><option value="">اختر المشرف</option>'+needsIdentity.map(x=>'<option value="'+Number(x.id)+'">'+esc(x.name||'مشرف')+'</option>').join('')+'</select></div><div class="field"><label for="supervisorNationalIdInput">رقم الهوية الوطنية</label><input id="supervisorNationalIdInput" required type="text" inputmode="numeric" pattern="[0-9]{7,12}" minlength="7" maxlength="12" autocomplete="off" placeholder="7 إلى 12 رقمًا"></div><button class="btn gold" type="submit">حفظ الهوية في السجل الخاص</button></form></div>'
+   : '<p class="muted small">لا توجد سجلات نشطة أخرى تحتاج تسجيل هوية جديدة. المشرفون الذين سُجلت هوياتهم يمكنهم إنشاء حساباتهم من واجهة «دخول المشرف».</p>';
+  const status=x=>!x.active?'غير نشط':x.account_linked?'حساب مرتبط':x.national_id_registered?'الهوية مسجلة — يمكن للمشرف إنشاء حساب':'الهوية غير مسجلة — تحتاج مراجعة القسم';
+  out.innerHTML=identitySetup+'<p><strong>عدد المشرفين:</strong> '+rows.length+' — <strong>حسابات مرتبطة:</strong> '+rows.filter(x=>x.account_linked).length+' — <strong>هويات تحتاج تسجيلًا:</strong> '+needsIdentity.length+'</p><div class="tablewrap"><table><thead><tr><th>المشرف</th><th>التخصص</th><th>الفئة</th><th>المنطقة</th><th>الحساب</th><th>حالة الهوية</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.category||'—')+'</td><td>'+esc(x.region||'—')+'</td><td>'+esc(x.account_linked?'مرتبط':'غير مرتبط')+'</td><td>'+esc(status(x))+'</td></tr>').join('')+'</tbody></table></div><p class="muted small">لا يُظهر النظام أرقام الهوية في الجدول. لا تستخدم هذه الشاشة لتغيير هوية مشرف لديه حساب مرتبط.</p>';
+  const identityForm=$('supervisorIdentityForm');
+  if(identityForm) identityForm.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const supervisorId=Number($('supervisorIdentitySupervisor').value);
+   const nationalId=$('supervisorNationalIdInput').value.replace(/\D/g,'');
+   if(!Number.isInteger(supervisorId)||supervisorId<=0||!/^\d{7,12}$/.test(nationalId)){showNotice('اختر المشرف وأدخل رقم هوية صحيحًا من 7 إلى 12 رقمًا.','error');return}
+   const button=identityForm.querySelector('button[type="submit"]'),oldText=button.textContent;
+   button.disabled=true;button.textContent='جارٍ حفظ الهوية...';
+   try{
+    const saved=await studentAuthRequest({action:'set_national_id',supervisor_id:supervisorId,national_id:nationalId},currentSession?.access_token,'supervisor-auth');
+    showNotice(saved.message||'تم حفظ الهوية في السجل الخاص.','success');
+    await renderSupervisorAccountManager();
+   }catch(err){showNotice(err.message||'تعذر حفظ الهوية.','error')}
+   finally{if(button.isConnected){button.disabled=false;button.textContent=oldText}}
+  });
  }catch(err){out.innerHTML='<p class="notice show error">'+esc(err.message||'تعذر تحميل حالة حسابات المشرفين.')+'</p>'}
 }
-
 async function renderDocumentManager(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('رفع النماذج متاح لرئيس القسم فقط.','error');return}
  const r=$('staffResults');
@@ -372,9 +402,11 @@ function toggleAuthView(view){
  $('loginView').classList.toggle('hidden',view!=='login');
  $('signupView').classList.toggle('hidden',view!=='signup');
  $('resetView').classList.toggle('hidden',view!=='reset');
+ $('supervisorSignupView').classList.toggle('hidden',view!=='supervisorSignup');
 }
 $('showLoginBtn').addEventListener('click',()=>toggleAuthView('login'));
-$('showSignupBtn').addEventListener('click',()=>{toggleAuthView('signup');updateSignupSupervisorOptions()});
+$('showSignupBtn').addEventListener('click',()=>{authLoginMode='general';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('signup');updateSignupSupervisorOptions()});
+$('showSupervisorSignupBtn').addEventListener('click',()=>{authLoginMode='supervisor';toggleAuthView('supervisorSignup');$('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';$('loginIdentifierLabel').textContent='رقم الهوية الوطنية للمشرف';$('loginIdentifier').placeholder='رقم الهوية الوطنية للمشرف'});
 $('showResetBtn').addEventListener('click',()=>toggleAuthView('reset'));
 $('backToLoginBtn').addEventListener('click',()=>toggleAuthView('login'));
 function bindPasswordToggle(inputId,buttonId){
@@ -429,6 +461,36 @@ $('signupForm').addEventListener('submit',async e=>{
   showNotice('تم إنشاء حساب الطالب وتسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر إنشاء الحساب.','error')}
  finally{if(submit)submit.disabled=false}
+});
+$('supervisorSignupForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(!sb){showNotice('تعذر الاتصال بخدمة الحسابات.','error');return}
+ const fullName=$('supervisorFullName').value.trim();
+ const nationalId=$('supervisorNationalId').value.replace(/\D/g,'');
+ const password=$('supervisorSignupPassword').value;
+ const confirmation=$('supervisorConfirmPassword').value;
+ if(!fullName||!/^\d{7,12}$/.test(nationalId)){showNotice('أدخل الاسم ورقم الهوية الصحيح.','error');return}
+ if(password.length<10){showNotice('كلمة المرور يجب ألا تقل عن 10 أحرف.','error');return}
+ if(password!==confirmation){showNotice('كلمتا المرور غير متطابقتين.','error');return}
+ const submit=e.submitter||$('supervisorSignupForm').querySelector('button[type="submit"]');
+ const oldText=submit?.textContent||'إنشاء حساب المشرف';
+ if(submit){submit.disabled=true;submit.textContent='جارٍ التحقق وإنشاء الحساب...'}
+ try{
+  const result=await studentAuthRequest({action:'signup',full_name:fullName,national_id:nationalId,password},undefined,'supervisor-auth');
+  if(result.session?.access_token&&result.session?.refresh_token){
+   await acceptAuthSession(result);
+   showNotice('تم إنشاء حساب المشرف وربطه بسجله بنجاح.','success');
+  }else if(result.registered){
+   showNotice(result.message||'تم إنشاء الحساب وربطه؛ سجّل الدخول باستخدام رقم الهوية وكلمة المرور.','success');
+   toggleAuthView('login');
+   $('loginIdentifier').value=nationalId;
+   $('loginIdentifierLabel').textContent='رقم الهوية الوطنية للمشرف';
+   $('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';
+  }else{
+   throw new Error('لم يكتمل التسجيل؛ راجع رئيس القسم.');
+  }
+ }catch(err){showNotice(err.message||'تعذر إنشاء حساب المشرف.','error')}
+ finally{if(submit){submit.disabled=false;submit.textContent=oldText}}
 });
 $('passwordResetForm').addEventListener('submit',async e=>{
  e.preventDefault();
