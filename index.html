@@ -273,7 +273,7 @@ async function renderSupervisorAccountManager(){
     showNotice(result.message||'تمت مراجعة الطلب.','success');
     await renderSupervisorAccountManager();
    }catch(err){showNotice(err.message||'تعذرت مراجعة الطلب.','error');button.disabled=false}
-  });
+  }));
   const identityForm=$('supervisorIdentityForm');
   if(identityForm) identityForm.addEventListener('submit',async e=>{
    e.preventDefault();
