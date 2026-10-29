@@ -541,20 +541,32 @@ async function loadAssignmentManager(){
 async function renderSingleStudentEntry(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('إضافة طالب للكشف متاحة لرئيس القسم والإدارة فقط.','error');return}
  const r=$('staffResults');
- r.innerHTML='<div class="card"><h3>إضافة طالب جديد إلى كشف الطلاب المؤهلين</h3><p class="muted">استخدم هذه الشاشة للطلاب الذين أُضيفوا حديثًا ولم يظهروا في ملف Excel السابق. هذه الإضافة تسمح للطالب بإنشاء حسابه بنفسه؛ لا تنشئ حسابًا تلقائيًا ولا تعتمد ساعات التدريب.</p><form id="singleRosterForm"><div class="field"><label for="singleRosterName">الاسم الرباعي كما في كشف القسم</label><input id="singleRosterName" required maxlength="200" autocomplete="off"></div><div class="field"><label for="singleRosterNumber">الرقم الجامعي</label><input id="singleRosterNumber" required inputmode="numeric" pattern="(122|222)[0-9]{2,}" minlength="5" maxlength="20" placeholder="122… للطالب أو 222… للطالبة" autocomplete="off"></div><div class="field"><label>فئة الطالب</label><input id="singleRosterGender" readonly value="تُحدد تلقائيًا من الرقم الجامعي"></div><div class="field"><label for="singleRosterSpecialty">التخصص</label><select id="singleRosterSpecialty" required><option value="">جارٍ تحميل التخصصات...</option></select></div><button class="btn gold" id="singleRosterSave" type="submit">إضافة الطالب إلى الكشف</button></form><div id="singleRosterResult" aria-live="polite"></div></div>';
- const form=$('singleRosterForm'),numberEl=$('singleRosterNumber'),genderEl=$('singleRosterGender'),specialtyEl=$('singleRosterSpecialty'),result=$('singleRosterResult');
+ r.innerHTML='<div class="card"><h3>إضافة طالب جديد إلى كشف الطلاب المؤهلين</h3><p class="muted">استخدم هذه الشاشة للطلاب الذين أُضيفوا حديثًا ولم يظهروا في ملف Excel السابق. هذه الإضافة تسمح للطالب بإنشاء حسابه بنفسه؛ لا تنشئ حسابًا تلقائيًا ولا تعتمد ساعات التدريب.</p><p class="muted small">يُحفظ ما تكتبه مؤقتًا في هذه الجلسة، حتى لا يضيع عند الانتقال إلى Word والعودة للصفحة.</p><form id="singleRosterForm"><div class="field"><label for="singleRosterName">الاسم الرباعي كما في كشف القسم</label><input id="singleRosterName" required maxlength="200" autocomplete="off"></div><div class="field"><label for="singleRosterNumber">الرقم الجامعي</label><input id="singleRosterNumber" required inputmode="numeric" pattern="(122|222)[0-9]{2,}" minlength="5" maxlength="20" placeholder="122… للطالب أو 222… للطالبة" autocomplete="off"></div><div class="field"><label>فئة الطالب</label><input id="singleRosterGender" readonly value="تُحدد تلقائيًا من الرقم الجامعي"></div><div class="field"><label for="singleRosterSpecialty">التخصص</label><select id="singleRosterSpecialty" required><option value="">جارٍ تحميل التخصصات...</option></select></div><button class="btn gold" id="singleRosterSave" type="submit">إضافة الطالب إلى الكشف</button></form><div id="singleRosterResult" aria-live="polite"></div></div>';
+ const form=$('singleRosterForm'),nameEl=$('singleRosterName'),numberEl=$('singleRosterNumber'),genderEl=$('singleRosterGender'),specialtyEl=$('singleRosterSpecialty'),result=$('singleRosterResult');
+ const draftKey='aqsa_single_roster_draft_'+String(currentSession?.user?.id||'department');
+ const readDraft=()=>{try{return JSON.parse(sessionStorage.getItem(draftKey)||'null')}catch(_){return null}};
+ const saveDraft=()=>{try{sessionStorage.setItem(draftKey,JSON.stringify({full_name:nameEl.value,university_number:numberEl.value,specialty_id:specialtyEl.value,updated_at:Date.now()}))}catch(_){}};
+ const syncGender=()=>{const value=String(numberEl.value||'').replace(/\s/g,'');genderEl.value=value.startsWith('122')?'ذكر':value.startsWith('222')?'أنثى':'يُحدد تلقائيًا من بادئة الرقم 122 أو 222'};
  const {data:specialties,error:specialtyError}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');
  if(specialtyError){specialtyEl.innerHTML='<option value="">تعذر تحميل التخصصات</option>';showNotice('تعذر تحميل التخصصات: '+specialtyError.message,'error');return}
  specialtyEl.innerHTML='<option value="">اختر التخصص</option>'+(specialties||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
- numberEl.addEventListener('input',()=>{
-  const value=String(numberEl.value||'').replace(/\s/g,'');
-  genderEl.value=value.startsWith('122')?'ذكر':value.startsWith('222')?'أنثى':'يُحدد تلقائيًا من بادئة الرقم 122 أو 222';
- });
+ const draft=readDraft();
+ if(draft){
+  nameEl.value=typeof draft.full_name==='string'?draft.full_name:'';
+  numberEl.value=typeof draft.university_number==='string'?draft.university_number:'';
+  specialtyEl.value=String(draft.specialty_id||'');
+  syncGender();
+  if(nameEl.value||numberEl.value||specialtyEl.value)result.innerHTML='<p class="notice show">استعدنا بيانات الطالب التي كنت تدخلها. أكمل من حيث توقفت.</p>';
+ }
+ nameEl.addEventListener('input',saveDraft);
+ numberEl.addEventListener('input',()=>{syncGender();saveDraft()});
+ specialtyEl.addEventListener('change',saveDraft);
  form.onsubmit=async e=>{
   e.preventDefault();
-  const fullName=$('singleRosterName').value.trim();
+  const fullName=nameEl.value.trim();
   const universityNumber=String(numberEl.value||'').trim().replace(/\s/g,'');
   const specialtyId=Number(specialtyEl.value);
+  saveDraft();
   if(!fullName){showNotice('أدخل الاسم كما هو في كشف القسم.','error');return}
   if(!/^(122|222)\d{2,}$/.test(universityNumber)){showNotice('الرقم يجب أن يبدأ بـ 122 للطلاب أو 222 للطالبات، وبخمسة أرقام على الأقل.','error');return}
   if(!Number.isInteger(specialtyId)||specialtyId<=0){showNotice('اختر التخصص الصحيح.','error');return}
@@ -580,6 +592,7 @@ async function renderSingleStudentEntry(){
     added_by:currentSession.user.id
    });
    if(insertError)throw insertError;
+   try{sessionStorage.removeItem(draftKey)}catch(_){}
    result.innerHTML='<p class="notice show success">تمت إضافة الطالب إلى الكشف بنجاح. يمكنه الآن التسجيل بنفسه من «تسجيل طالب جديد»، ويجب أن يكتب الاسم والرقم والتخصص كما سُجلت هنا. لم يتم إنشاء حسابه أو اعتماد ساعات التدريب تلقائيًا.</p>';
    form.reset();genderEl.value='تُحدد تلقائيًا من الرقم الجامعي';
   }catch(err){
