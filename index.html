@@ -267,24 +267,8 @@ async function renderSupervisorAccountManager(){
    finally{button.disabled=false;button.textContent=oldText}
   }));
 
-  const joinResult=await studentAuthRequest({action:'list_join_requests'},currentSession.access_token,'supervisor-auth');
-  const joinRows=joinResult.requests||[];
-  out.innerHTML += '<div class="card"><h3>طلبات اعتماد المشرفين الجدد ('+joinRows.filter(x=>x.status==='pending').length+' قيد المراجعة)</h3><p class="muted small">تظهر بيانات التواصل المطلوبة للمراجعة فقط؛ لا تُعرض أرقام الهوية. اعتماد الطلب يضيف المشرف إلى الكشف ويسجل هويته حتى يتمكن من إنشاء حسابه.</p>'+
-   (joinRows.length?'<div class="tablewrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>التخصص</th><th>تاريخ الطلب</th><th>الحالة / القرار</th></tr></thead><tbody>'+
-   joinRows.map(x=>'<tr><td>'+esc(x.full_name||'—')+'</td><td>'+esc(x.phone||'—')+'</td><td>'+esc(x.region||'—')+'</td><td>'+esc(x.specialty||'—')+'</td><td>'+esc(x.submitted_at?new Date(x.submitted_at).toLocaleDateString('ar'):'—')+'</td><td>'+
-   (x.status==='pending'?'<button class="btn gold" type="button" data-review-join="approve" data-request-id="'+Number(x.request_id)+'">اعتماد</button> <button class="btn ghost" type="button" data-review-join="reject" data-request-id="'+Number(x.request_id)+'">رفض</button>':esc(x.status==='approved'?'معتمد':'مرفوض'))+
-   '</td></tr>').join('')+'</tbody></table></div>':'<p>لا توجد طلبات انضمام حتى الآن.</p>')+'</div>';
-  out.querySelectorAll('[data-review-join]').forEach(button=>button.addEventListener('click',async()=>{
-   const decision=button.dataset.reviewJoin,requestId=Number(button.dataset.requestId);
-   const question=decision==='approve'?'هل تريد اعتماد هذا المشرف وإضافته إلى كشف القسم؟':'هل تريد رفض طلب الانضمام؟';
-   if(!confirm(question))return;
-   button.disabled=true;
-   try{
-    const result=await studentAuthRequest({action:'review_join_request',request_id:requestId,decision},currentSession.access_token,'supervisor-auth');
-    showNotice(result.message||'تمت مراجعة الطلب.','success');
-    await renderSupervisorAccountManager();
-   }catch(err){showNotice(err.message||'تعذرت مراجعة الطلب.','error');button.disabled=false}
-  }));
+  // لا تُحمّل طلبات الانضمام من هذه الوظيفة؛ لا يوجد لها إجراء منشور في supervisor-auth.
+  // أبقِ جدول حالة الحسابات وأدوات إدارة الهوية/كلمة المرور ظاهرة دون إظهار خطأ مضلل.
   const identityForm=$('supervisorIdentityForm');
   if(identityForm) identityForm.addEventListener('submit',async e=>{
    e.preventDefault();
