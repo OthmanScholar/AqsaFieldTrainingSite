@@ -770,7 +770,38 @@ async function loadSupervisorForms(){
  }
  renderForm();
 }
-async function loadEvidence(){const r=$('staffResults');const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,claimed_completed_hours,review_status,created_at').order('created_at',{ascending:false}).limit(200);if(error){r.textContent='تعذر تحميل الإثباتات: '+error.message;return}r.innerHTML='<div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الساعات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+(data||[]).map(x=>`<tr><td>${esc(x.student_user_id)}</td><td>${esc(x.claimed_completed_hours)}</td><td>${esc(x.review_status)}</td><td>${x.review_status==='pending'?`<button class="btn" data-review="${x.id}" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="${x.id}" data-status="rejected">رفض</button>`:'—'}</td></tr>`).join('')+'</tbody></table></div>';r.querySelectorAll('[data-review]').forEach(b=>b.onclick=async()=>{const {error}=await sb.rpc('review_hour_evidence',{p_evidence_id:Number(b.dataset.review),p_status:b.dataset.status,p_note:null,p_exception_reason:null});if(error)showNotice(error.message,'error');else{showNotice('تم حفظ قرار المراجعة.','success');loadEvidence()}})}
+async function loadEvidence(){
+ const r=$('staffResults');
+ r.innerHTML='<p>جارٍ تحميل إثباتات الساعات...</p>';
+ const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,claimed_completed_hours,review_status,review_note,exception_reason,created_at').order('created_at',{ascending:false}).limit(200);
+ if(error){r.textContent='تعذر تحميل الإثباتات: '+error.message;return}
+ const evidence=data||[];
+ if(!evidence.length){r.innerHTML='<p class="muted">لا توجد إثباتات ساعات مقدمة حتى الآن.</p>';return}
+ const ids=[...new Set(evidence.map(x=>x.student_user_id).filter(Boolean))];
+ const pr=ids.length?await sb.from('student_profiles').select('user_id,full_name,university_number').in('user_id',ids):{data:[],error:null};
+ if(pr.error){r.textContent='تعذر تحميل أسماء الطلاب: '+pr.error.message;return}
+ const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
+ r.innerHTML='<p><strong>عدد إثباتات الساعات:</strong> '+evidence.length+'</p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات المطلوبة</th><th>الحالة</th><th>الملاحظة</th><th>القرار</th></tr></thead><tbody>'+evidence.map(x=>{
+  const p=profiles.get(x.student_user_id)||{};
+  const pending=x.review_status==='pending';
+  return '<tr><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+esc(x.review_status||'—')+'</td><td>'+esc(x.review_note||x.exception_reason||'—')+'</td><td>'+(pending?'<button class="btn" data-review="'+x.id+'" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="'+x.id+'" data-status="rejected">رفض</button> <button class="btn gold" data-review="'+x.id+'" data-status="exception_approved">استثناء مسبب</button>':'تمت المراجعة')+'</td></tr>';
+ }).join('')+'</tbody></table></div>';
+ r.querySelectorAll('[data-review]').forEach(b=>b.onclick=async()=>{
+  const status=b.dataset.status;
+  let note=null,exceptionReason=null;
+  if(status==='rejected'){note=prompt('اكتب سبب رفض إثبات الساعات:');if(note===null)return;if(!note.trim()){showNotice('اكتب سبب الرفض قبل المتابعة.','error');return}}
+  if(status==='exception_approved'){exceptionReason=prompt('اكتب مبرر الاستثناء (إلزامي):');if(exceptionReason===null)return;if(!exceptionReason.trim()){showNotice('يجب توثيق مبرر الاستثناء.','error');return}}
+  const label=status==='approved'?'اعتماد الإثبات':status==='rejected'?'رفض الإثبات':'اعتماد الاستثناء المسبب';
+  if(!confirm('تأكيد '+label+'؟'))return;
+  b.disabled=true;
+  const {error:decisionError}=await sb.rpc('review_hour_evidence',{
+   p_evidence_id:Number(b.dataset.review),p_status:status,p_note:note,p_exception_reason:exceptionReason
+  });
+  if(decisionError){showNotice('تعذر حفظ القرار: '+decisionError.message,'error');b.disabled=false;return}
+  showNotice(status==='exception_approved'?'تم تسجيل الاستثناء مع المبرر.':'تم حفظ قرار مراجعة الساعات.','success');
+  await loadEvidence();
+ });
+}
 async function loadRegistrationRequests(){
  const r=$('staffResults');r.textContent='جارٍ تحميل طلبات التدريب الرسمية…';
  const {data:requests,error}=await sb.from('training_registration_requests').select('id,student_user_id,specialty_id,training_entity_id,request_status,department_note,created_at').order('created_at',{ascending:false}).limit(200);
