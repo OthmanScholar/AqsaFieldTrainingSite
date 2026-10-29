@@ -361,8 +361,25 @@ $('showLoginBtn').addEventListener('click',()=>toggleAuthView('login'));
 $('showSignupBtn').addEventListener('click',()=>{toggleAuthView('signup');updateSignupSupervisorOptions()});
 $('showResetBtn').addEventListener('click',()=>toggleAuthView('reset'));
 $('backToLoginBtn').addEventListener('click',()=>toggleAuthView('login'));
-$('toggleLoginPassword').addEventListener('click',()=>{const p=$('loginPassword');p.type=p.type==='password'?'text':'password';$('toggleLoginPassword').textContent=p.type==='password'?'إظهار':'إخفاء'});
-$('toggleSignupPassword').addEventListener('click',()=>{const p=$('signupPassword');p.type=p.type==='password'?'text':'password';$('toggleSignupPassword').textContent=p.type==='password'?'إظهار':'إخفاء'});
+function bindPasswordToggle(inputId,buttonId){
+ const input=document.getElementById(inputId),button=document.getElementById(buttonId);
+ if(!input||!button)return;
+ button.type='button';
+ button.setAttribute('aria-controls',inputId);
+ button.setAttribute('aria-pressed','false');
+ button.textContent='إظهار';
+ button.onclick=(event)=>{
+  event.preventDefault();
+  event.stopPropagation();
+  const shouldShow=input.type==='password';
+  input.type=shouldShow?'text':'password';
+  button.textContent=shouldShow?'إخفاء':'إظهار';
+  button.setAttribute('aria-pressed',String(shouldShow));
+  input.focus({preventScroll:true});
+ };
+}
+bindPasswordToggle('loginPassword','toggleLoginPassword');
+bindPasswordToggle('signupPassword','toggleSignupPassword');
 ['signupArea','specialty','universityNumber'].forEach(id=>$(id).addEventListener('change',updateSignupSupervisorOptions));
 $('universityNumber').addEventListener('input',updateSignupSupervisorOptions);
 async function studentAuthRequest(payload,accessToken,functionName='student-auth'){
