@@ -371,7 +371,7 @@ async function loadAssignmentManager(){
   const students=studentsResult.data||[],staff=staffResult.data||[],specs=specsResult.data||[],entities=entitiesResult.data||[],assignments=assignResult.data||[];
   const specMap=new Map(specs.map(x=>[String(x.id),x.name]));
   const entityMap=new Map(entities.map(x=>[String(x.id),x.name]));
-  const staffMap=new Map(staff.map(x=>[x.user_id,x.full_name]));
+  const staffMap=new Map(staff.map(x=>[x.user_id,x.name]));
   const studentMap=new Map(students.map(x=>[x.user_id,x]));
   const eligible=students.filter(x=>x.eligibility_status==='approved'&&Number(x.completed_hours||0)>=36&&x.specialty_id);
   const activeAssignments=assignments.filter(a=>staffMap.has(a.supervisor_user_id));
