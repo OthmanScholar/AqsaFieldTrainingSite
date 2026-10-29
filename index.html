@@ -497,6 +497,15 @@ async function previewRosterFile(){
   const {data:specs,error}=await sb.from('specialties').select('id,name').eq('is_active',true);
   if(error)throw error;
   const specMap=new Map((specs||[]).map(x=>[rosterHeaderKey(x.name),x.id]));
+  const specialtyAliases=[
+   {canonical:'السكرتاريا الدولية',aliases:['السكرتارية الدولية','السكرتاريــــة الدوليـــة','السكرتارية الدوليــة']},
+   {canonical:'الصحافة الإلكترونية',aliases:['الصحافــــة الإلكترونيـــــة','الصحافة الالكترونية']},
+   {canonical:'العلاقات العامة والإعلام',aliases:['العلاقات العامة والاعلام']}
+  ];
+  for(const group of specialtyAliases){
+   const id=specMap.get(rosterHeaderKey(group.canonical));
+   if(id)for(const alias of group.aliases)specMap.set(rosterHeaderKey(alias),id);
+  }
   const fieldMap={
    number:['الرقم الجامعي','رقم الطالب','university_number','studentnumber','universitynumber'],
    name:['اسم الطالب','الاسم الرباعي','اسم الطالبة','الاسم','full_name','fullname','studentname'],
