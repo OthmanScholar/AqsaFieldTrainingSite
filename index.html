@@ -961,30 +961,39 @@ async function loadSupervisorAssignedView(r){
  }
  const assignments=assignmentResult.data||[];
  const selected=selectedResult.data||[];
- const studentIds=[...new Set(assignments.map(x=>x.student_user_id).filter(Boolean))];
+ const studentIds=[...new Set([...assignments.map(x=>x.student_user_id),...selected.map(x=>x.student_user_id)].filter(Boolean))];
  const specialtyIds=[...new Set(assignments.map(x=>x.specialty_id).filter(v=>v!==null&&v!==undefined))];
  const entityIds=[...new Set(assignments.map(x=>x.training_entity_id).filter(v=>v!==null&&v!==undefined))];
- const [pr,sr,er]=await Promise.all([
+ const [pr,sr,er,prefResult]=await Promise.all([
   studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,student_area,phone').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
   specialtyIds.length?sb.from('specialties').select('id,name').in('id',specialtyIds):Promise.resolve({data:[],error:null}),
-  entityIds.length?sb.from('training_entities').select('id,name').in('id',entityIds):Promise.resolve({data:[],error:null})
+  entityIds.length?sb.from('training_entities').select('id,name').in('id',entityIds):Promise.resolve({data:[],error:null}),
+  studentIds.length?sb.from('student_training_preferences').select('student_user_id,student_area,training_type,preferred_training_entity_id,proposed_entity_name,proposed_entity_location').in('student_user_id',studentIds):Promise.resolve({data:[],error:null})
  ]);
- if(pr.error||sr.error||er.error){r.innerHTML='<p class="notice show error">تعذر تحميل بيانات التكليفات الرسمية: '+esc((pr.error||sr.error||er.error).message)+'</p>';return}
+ if(pr.error||sr.error||er.error){
+  r.innerHTML='<p class="notice show error">تعذر تحميل بيانات الطلاب أو التخصصات أو الجهات: '+esc((pr.error||sr.error||er.error).message)+'</p>';
+  return;
+ }
  const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
  const specialties=new Map((sr.data||[]).map(x=>[String(x.id),x.name]));
  const entities=new Map((er.data||[]).map(x=>[String(x.id),x.name]));
- const notOfficial=selected.filter(x=>x.assignment_status!=='مكلف رسميًا');
- const registrationLabel=s=>s==='approved'?'معتمد':s==='rejected'?'مرفوض':'قيد المراجعة';
- const eligibilityLabel=s=>s==='approved'?'مؤهل':s==='exception_approved'?'استثناء معتمد':s==='rejected'?'الإثبات مرفوض':'قيد مراجعة الساعات';
- const assignedHtml=assignments.length
-  ? '<p><strong>عدد الطلاب المكلّفين رسميًا: '+assignments.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>#</th><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>المنطقة</th><th>الحالة</th></tr></thead><tbody>'+assignments.map((x,i)=>{const p=profiles.get(x.student_user_id)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialties.get(String(x.specialty_id))||'غير محدد')+'</td><td>'+esc(entities.get(String(x.training_entity_id))||'غير محددة')+'</td><td>'+esc(p.student_area||'—')+'</td><td>مكلّف رسميًا</td></tr>'}).join('')+'</tbody></table></div>'
-  : '<p class="muted">لا توجد تكليفات رسمية مسجلة لحسابك حتى الآن.</p>';
- const selectedHtml=notOfficial.length
-  ? '<p><strong>عدد الطلاب الذين اختاروك عند التسجيل ولم يكتمل تكليفهم على حسابك: '+notOfficial.length+'</strong></p><div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>منطقة التدريب</th><th>حالة التسجيل</th><th>حالة الأهلية</th><th>الساعات المعتمدة</th><th>حالة التكليف</th></tr></thead><tbody>'+notOfficial.map(x=>'<tr><td>'+esc(x.full_name||'—')+'</td><td>'+esc(x.university_number||'—')+'</td><td>'+esc(x.specialty_name||'غير محدد')+'</td><td>'+esc(x.student_area||'غير محددة')+'</td><td>'+esc(registrationLabel(x.registration_status))+'</td><td>'+esc(eligibilityLabel(x.eligibility_status))+'</td><td>'+esc(x.completed_hours==null?'لم تعتمد بعد':String(x.completed_hours))+'</td><td>'+esc(x.assignment_status||'بانتظار التكليف الرسمي')+'</td></tr>').join('')+'</tbody></table></div>'
-  : '<p class="muted">لا يوجد طلاب آخرون اختاروك عند التسجيل وينتظرون التكليف الرسمي حاليًا.</p>';
- r.innerHTML='<div class="card"><h3>طلابك في نظام التدريب</h3><p class="muted">يظهر هنا تلقائيًا كل طالب يختارك مشرفًا عند التسجيل. قائمة التكليفات الرسمية منفصلة؛ لا يمكن تسجيل الزيارات أو التقييمات للطلاب غير المكلّفين رسميًا.</p><h4>أولًا: التكليفات الرسمية</h4>'+assignedHtml+'<h4>ثانيًا: الطلاب الذين اختاروك عند التسجيل</h4>'+selectedHtml+'</div>';
+ const preferences=new Map((prefResult.data||[]).map(x=>[x.student_user_id,x]));
+ const officialByStudent=new Map(assignments.map(x=>[x.student_user_id,x]));
+ const rows=selected.map(x=>{
+  const p=profiles.get(x.student_user_id)||{};
+  const pref=preferences.get(x.student_user_id)||{};
+  const assignment=officialByStudent.get(x.student_user_id);
+  const assignedEntity=assignment?.training_entity_id?entities.get(String(assignment.training_entity_id)):'';
+  const preferredEntity=pref.preferred_training_entity_id?entities.get(String(pref.preferred_training_entity_id)):'';
+  const placeName=assignedEntity||preferredEntity||pref.proposed_entity_name||'لم يحدد بعد';
+  const placeLocation=pref.proposed_entity_location||pref.student_area||x.student_area||p.student_area||'—';
+  const officialLabel=x.assignment_status==='مكلف رسميًا'?'مكلف رسميًا':x.assignment_status||'بانتظار التكليف الرسمي';
+  return {name:x.full_name||p.full_name||'—',number:x.university_number||p.university_number||'—',phone:p.phone||'—',specialty:x.specialty_name||'—',area:placeLocation,place:placeName,status:officialLabel};
+ });
+ r.innerHTML='<div class="card"><h3>طلابك في نظام التدريب</h3><p class="muted">بيانات الطلاب ومكان التدريب كما أدخلوها، مع توضيح حالة التكليف الرسمي. لا تظهر هنا أزرار إدارية؛ إدارة الاعتماد والتكليف تبقى لدى رئيس القسم.</p><p><strong>عدد الطلاب الذين اختاروك عند التسجيل: '+rows.length+'</strong> — <strong>التكليفات الرسمية على حسابك: '+assignments.length+'</strong></p>'+
+ (rows.length?'<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>التخصص</th><th>مكان التدريب / المنطقة</th><th>اسم جهة التدريب</th><th>حالة التكليف</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.area)+'</td><td>'+esc(x.place)+'</td><td>'+esc(x.status)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">لا يوجد طلاب اختاروك عند التسجيل حتى الآن.</p>')+'</div>';
+ if(prefResult.error) showNotice('ظهرت بيانات الطلاب، لكن صلاحية قراءة تفضيلات جهة التدريب غير متاحة للمشرف. ستبقى بيانات الاعتماد والتعديل لدى رئيس القسم.','error');
 }
-
 async function loadAssigned(){
  const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل الطلاب والتكليفات...</p>';
  if(currentRole==='supervisor'){await loadSupervisorAssignedView(r);return}
