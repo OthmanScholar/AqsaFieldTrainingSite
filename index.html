@@ -1341,7 +1341,7 @@ async function loadPasswordResetRequests(){
   });
  }catch(err){r.textContent=err.message||'تعذر تحميل طلبات الاسترجاع.'}
 }
-async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')showRecoveryForm();refreshSession()});if(new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery')showRecoveryForm();await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession()}
+async function init(){if(!sb){showNotice('لم يتم تحميل مكتبة Supabase. افحص الاتصال بالإنترنت.','error');return}sb.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){showRecoveryForm();return}if(event==='SIGNED_IN'||event==='SIGNED_OUT')refreshSession()});if(new URLSearchParams(window.location.hash.slice(1)).get('type')==='recovery')showRecoveryForm();await loadSpecialties();await loadEntities();await loadSupervisors();await refreshSession()}
 init();
 </script>
 </body></html>
