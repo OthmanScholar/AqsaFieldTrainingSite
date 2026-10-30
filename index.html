@@ -967,7 +967,7 @@ async function loadSupervisorAssignedView(r){
  const [pr,sr,er,prefResult]=await Promise.all([
   studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,student_area,phone').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
   specialtyIds.length?sb.from('specialties').select('id,name').in('id',specialtyIds):Promise.resolve({data:[],error:null}),
-  entityIds.length?sb.from('training_entities').select('id,name').in('id',entityIds):Promise.resolve({data:[],error:null}),
+  sb.from('training_entities').select('id,name').eq('is_active',true).limit(1000),
   studentIds.length?sb.from('student_training_preferences').select('student_user_id,student_area,training_type,preferred_training_entity_id,proposed_entity_name,proposed_entity_location').in('student_user_id',studentIds):Promise.resolve({data:[],error:null})
  ]);
  if(pr.error||sr.error||er.error){
