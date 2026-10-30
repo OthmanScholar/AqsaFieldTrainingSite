@@ -949,50 +949,33 @@ async function saveStudentPreference(e){
 async function submitRequest(e){e.preventDefault();const entity=$('requestEntity').value;if(!entity){showNotice('اختر جهة تدريب أولًا.','error');return}const {data:p}=await sb.from('student_profiles').select('specialty_id,eligibility_status,completed_hours').eq('user_id',currentSession.user.id).maybeSingle();if(!p||!['approved','exception_approved'].includes(p.eligibility_status)||(p.eligibility_status==='approved'&&Number(p.completed_hours||0)<36)){showNotice('لا يمكن إرسال الطلب قبل اعتماد أهلية التدريب وإثبات الساعات المطلوبة.','error');return}const {error}=await sb.from('training_registration_requests').insert({student_user_id:currentSession.user.id,specialty_id:p.specialty_id,training_entity_id:Number(entity),request_status:'pending'});if(error){showNotice(error.message,'error');return}showNotice('تم إرسال الطلب بنجاح.','success');renderPortal()}
 async function submitEvidence(e){e.preventDefault();const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value);if(!file)return;if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}const path=`${currentSession.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:currentSession.user.id,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});if(error){showNotice('تم رفع الملف لكن تعذّر تسجيل طلب المراجعة: '+error.message,'error');return}showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal()}
 async function loadSupervisorAssignedView(r){
- const uid=currentSession?.user?.id;
- const [assignmentResult,selectedResult]=await Promise.all([
-  sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').eq('supervisor_user_id',uid).limit(500),
-  sb.rpc('list_my_selected_students')
- ]);
- if(assignmentResult.error||selectedResult.error){
-  const error=assignmentResult.error||selectedResult.error;
-  r.innerHTML='<p class="notice show error">تعذر تحميل طلاب المشرف: '+esc(error.message||'تحقق من ربط حساب المشرف بدليل المشرفين.')+'</p>';
-  return;
- }
- const assignments=assignmentResult.data||[];
- const selected=selectedResult.data||[];
- const studentIds=[...new Set([...assignments.map(x=>x.student_user_id),...selected.map(x=>x.student_user_id)].filter(Boolean))];
- const specialtyIds=[...new Set(assignments.map(x=>x.specialty_id).filter(v=>v!==null&&v!==undefined))];
- const entityIds=[...new Set(assignments.map(x=>x.training_entity_id).filter(v=>v!==null&&v!==undefined))];
- const [pr,sr,er,prefResult]=await Promise.all([
-  studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,student_area,phone').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
-  specialtyIds.length?sb.from('specialties').select('id,name').in('id',specialtyIds):Promise.resolve({data:[],error:null}),
-  sb.from('training_entities').select('id,name').eq('is_active',true).limit(1000),
-  studentIds.length?sb.from('student_training_preferences').select('student_user_id,student_area,training_type,preferred_training_entity_id,proposed_entity_name,proposed_entity_location').in('student_user_id',studentIds):Promise.resolve({data:[],error:null})
- ]);
- if(pr.error||sr.error||er.error){
-  r.innerHTML='<p class="notice show error">تعذر تحميل بيانات الطلاب أو التخصصات أو الجهات: '+esc((pr.error||sr.error||er.error).message)+'</p>';
-  return;
- }
- const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
- const specialties=new Map((sr.data||[]).map(x=>[String(x.id),x.name]));
- const entities=new Map((er.data||[]).map(x=>[String(x.id),x.name]));
- const preferences=new Map((prefResult.data||[]).map(x=>[x.student_user_id,x]));
- const officialByStudent=new Map(assignments.map(x=>[x.student_user_id,x]));
- const rows=selected.map(x=>{
-  const p=profiles.get(x.student_user_id)||{};
-  const pref=preferences.get(x.student_user_id)||{};
-  const assignment=officialByStudent.get(x.student_user_id);
-  const assignedEntity=assignment?.training_entity_id?entities.get(String(assignment.training_entity_id)):'';
-  const preferredEntity=pref.preferred_training_entity_id?entities.get(String(pref.preferred_training_entity_id)):'';
-  const placeName=assignedEntity||preferredEntity||pref.proposed_entity_name||'لم يحدد بعد';
-  const placeLocation=pref.proposed_entity_location||pref.student_area||x.student_area||p.student_area||'—';
-  const officialLabel=x.assignment_status==='مكلف رسميًا'?'مكلف رسميًا':x.assignment_status||'بانتظار التكليف الرسمي';
-  return {name:x.full_name||p.full_name||'—',number:x.university_number||p.university_number||'—',phone:p.phone||'—',specialty:x.specialty_name||'—',area:placeLocation,place:placeName,status:officialLabel};
- });
- r.innerHTML='<div class="card"><h3>طلابك في نظام التدريب</h3><p class="muted">تعرض هذه الصفحة بيانات الطلاب ومكان التدريب فقط. مراجعة التسجيل والأهلية وإثبات الساعات واعتماد التكليف من اختصاص رئيس القسم.</p><p><strong>عدد الطلاب الذين اختاروك عند التسجيل: '+rows.length+'</strong></p>'+
- (rows.length?'<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>التخصص</th><th>مكان التدريب / المنطقة</th><th>اسم جهة التدريب</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.area)+'</td><td>'+esc(x.place)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">لا يوجد طلاب اختاروك عند التسجيل حتى الآن.</p>')+'</div>';
- if(prefResult.error) showNotice('ظهرت بيانات الطلاب، لكن صلاحية قراءة تفضيلات جهة التدريب غير متاحة للمشرف. ستبقى بيانات الاعتماد والتعديل لدى رئيس القسم.','error');
+  r.innerHTML='<p>جارٍ تحميل بيانات الطلاب الذين اختاروك...</p>';
+  try{
+    // بيانات المشرف والطلاب والتفضيلات تُقرأ من دالة آمنة واحدة تتحقق من صلاحية المشرف.
+    const {data,error}=await sb.rpc('list_my_selected_students_details');
+    if(error)throw error;
+
+    const rows=(data||[]).map(x=>({
+      name:x.full_name||'—',
+      number:x.university_number||'—',
+      phone:x.phone||'—',
+      specialty:x.specialty_name||'—',
+      area:x.training_area||'—',
+      place:x.training_entity_name||'—'
+    }));
+
+    r.innerHTML='<div class="card"><h3>طلابك في نظام التدريب</h3>'+
+      '<p class="muted">تعرض هذه الصفحة بيانات الطلاب الذين اختاروك عند التسجيل ومكان التدريب فقط. مراجعة التسجيل والأهلية وإثبات الساعات واعتماد التكليف من اختصاص رئيس القسم.</p>'+
+      '<p><strong>عدد الطلاب الذين اختاروك عند التسجيل: '+rows.length+'</strong></p>'+
+      (rows.length
+        ? '<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>التخصص</th><th>مكان التدريب / المنطقة</th><th>اسم جهة التدريب</th></tr></thead><tbody>'+
+          rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.area)+'</td><td>'+esc(x.place)+'</td></tr>').join('')+
+          '</tbody></table></div>'
+        : '<p class="muted">لا يوجد طلاب اختاروك عند التسجيل حتى الآن.</p>')+
+      '</div>';
+  }catch(err){
+    r.innerHTML='<p class="notice show error">تعذر تحميل بيانات الطلاب: '+esc(err.message||'تحقق من جلسة المشرف وصلاحية الدالة list_my_selected_students_details.')+'</p>';
+  }
 }
 async function loadAssigned(){
  const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل الطلاب والتكليفات...</p>';
