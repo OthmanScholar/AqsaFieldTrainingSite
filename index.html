@@ -638,7 +638,7 @@ async function loadSupervisorVisits(){
    const id=btn.dataset.save,n=Number(btn.dataset.n),date=out.querySelector('[data-date="'+id+'"][data-n="'+n+'"]').value,type=out.querySelector('[data-type="'+id+'"][data-n="'+n+'"]').value,notes=out.querySelector('[data-notes="'+id+'"][data-n="'+n+'"]').value.trim()||null;
    if(!date){showNotice('أدخل تاريخ الزيارة.','error');return}
    const year=Number(date.slice(0,4));
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||year<2000||year>2100){showNotice('التاريخ غير صحيح. اختر تاريخًا كاملًا بين 2000 و2100 ثم أعد الحفظ.','error');return}
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||year<2000||year>2100){showNotice('التاريخ غير صحيح. اختر تاريخًا كاملًا بين 2000 و2100 ثم أعد الحفظ.','error');return}
    btn.disabled=true;
    const {error}=await sb.rpc('save_supervisor_training_visit',{p_student_user_id:id,p_semester_code:semester,p_visit_number:n,p_visit_date:date,p_visit_type:type,p_visit_notes:notes});
    if(error){showNotice(error.message,'error');btn.disabled=false;return}
