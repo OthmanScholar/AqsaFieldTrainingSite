@@ -1042,8 +1042,8 @@ async function loadWorkloadReport(){
   const evalResult=ids.length?await sb.from('student_evaluations').select('student_user_id,portfolio_score,director_score,teacher_score,signature_sheet_score').in('student_user_id',ids):{data:[],error:null};
   if(evalResult.error){out.innerHTML='<p class="notice show error">تعذر تحميل الدرجات النهائية من سجل التقييمات: '+esc(evalResult.error.message)+'</p>';return}
   const evaluationMap=new Map((evalResult.data||[]).map(x=>[x.student_user_id,x]));
-  const finalGrade=(studentId)=>{const e=evaluationMap.get(studentId);if(!e)return '—';const vals=[e.portfolio_score,e.director_score,e.teacher_score,e.signature_sheet_score];if(vals.some(v=>v===null||v===undefined||v===''))return 'غير مكتملة';return vals.reduce((n,v)=>n+Number(v),0).toFixed(2).replace(/\\.00$/,'')+' / 100'};
-  const dateValue=(value)=>{if(!value)return '';const m=String(value).match(/^(\\d{4}-\\d{2}-\\d{2})/);return m?m[1]:''};
+  const finalGrade=(studentId)=>{const e=evaluationMap.get(studentId);if(!e)return '—';const vals=[e.portfolio_score,e.director_score,e.teacher_score,e.signature_sheet_score];if(vals.some(v=>v===null||v===undefined||v===''))return 'غير مكتملة';return vals.reduce((n,v)=>n+Number(v),0).toFixed(2).replace(/\.00$/,'')+' / 100'};
+  const dateValue=(value)=>{if(!value)return '';const m=String(value).match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:''};
   if(!isHead){
    const mine=assignments.filter(a=>a.supervisor_user_id===currentSession.user.id);
    const myVisits=visits.filter(v=>v.supervisor_user_id===currentSession.user.id);
