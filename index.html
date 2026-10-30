@@ -262,7 +262,17 @@ async function renderSupervisorAccountManager(){
    try{
     const result=await studentAuthRequest({action:'reset_password',supervisor_id:supervisorId},currentSession.access_token,'supervisor-auth');
     if(!result.temporary_password)throw new Error(result.message||'لم تُصدر كلمة المرور المؤقتة.');
-    showNotice('كلمة المرور المؤقتة لحساب '+name+': '+result.temporary_password+' — احفظها الآن، وسيتطلب النظام تغييرها بعد أول دخول.','success');
+    const host=$('staffResults');
+    const card=document.createElement('div');card.className='reset-result';
+    const title=document.createElement('h4');title.textContent='كلمة المرور المؤقتة لحساب '+name;card.appendChild(title);
+    const help=document.createElement('p');help.textContent='انسخ كلمة المرور وسلّمها للمشرف مباشرة بعد التحقق من هويته. لن تُعرض مرة أخرى بعد مغادرة هذه الشاشة.';card.appendChild(help);
+    const code=document.createElement('code');code.textContent=result.temporary_password;card.appendChild(code);
+    const copy=document.createElement('button');copy.className='btn ghost';copy.type='button';copy.textContent='نسخ كلمة المرور';copy.style.marginInlineStart='10px';
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(result.temporary_password);copy.textContent='تم النسخ'}catch{showNotice('تعذر النسخ التلقائي؛ حدد كلمة المرور وانسخها يدويًا.','error')}};
+    card.appendChild(copy);
+    const warning=document.createElement('p');warning.className='muted small';warning.textContent='هذه كلمة مرور مؤقتة للحساب المرتبط فقط؛ لا تشاركها إلا مع صاحب الحساب.';card.appendChild(warning);
+    host.prepend(card);
+    showNotice('تم إصدار كلمة المرور المؤقتة بنجاح لحساب '+name+'.','success');
    }catch(err){showNotice(err.message||'تعذر إصدار كلمة المرور المؤقتة.','error')}
    finally{button.disabled=false;button.textContent=oldText}
   }));
