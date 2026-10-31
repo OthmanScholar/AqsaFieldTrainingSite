@@ -186,7 +186,7 @@ body.supervisor-mode .home-hub{display:none!important}
   <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 6h13M8 8h8M8 12h8M8 16h5"/></svg></div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
   <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1.5a6.5 6.5 0 0 1 13 0V20z"/><path d="M17 10.5h5M19.5 8v5M17 16h5"/></svg></div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
   <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3.5 2.8 8.5 2.8 12 0v-5M22 9v6"/><path d="M22 15l-1 2"/></svg></div><h3>نماذج الطلاب</h3><p>نماذج التدريب المعتمدة للعرض والتحميل فقط.</p><button class="btn" data-go="documents">عرض النماذج</button></article>
-  <article class="card"><div class="emoji" aria-hidden="true">🗓️</div><h3>الفصول الدراسية</h3><p>إدارة الفصول الدراسية وتحديد الفصل الحالي المعتمد.</p><button class="btn" type="button" id="homeSemestersShortcut">إدارة الفصول الدراسية</button></article>
+
  </div>
 </section>
 <div class="wrap">
@@ -321,14 +321,7 @@ const result = await studentAuthRequest(
 const hidePanels=()=>['authPanel','entitiesPanel','supervisorsPanel','documentsPanel','portalPanel','contactPanel'].forEach(id=>$(id).classList.add('hidden'));
 function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavior:'smooth'});return}const map={auth:'authPanel',entities:'entitiesPanel',supervisors:'supervisorsPanel',documents:'documentsPanel',portal:'portalPanel',contact:'contactPanel'};const target=map[where]?$(map[where]):null;if(target){target.classList.remove('hidden');target.scrollIntoView({behavior:'smooth',block:'start'});}if(where==='documents')loadDocuments();if(where==='portal')renderPortal();}
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-$('homeSemestersShortcut').addEventListener('click',()=>{
- if(currentSession&&currentRole==='department_head'){
-  go('portal');
-  requestAnimationFrame(()=>loadAcademicSemestersManager());
- }else{
-  $('headLogin').click();
- }
-});
+
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>{authLoginMode='general';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل الدخول';$('loginIdentifierLabel').textContent='الرقم الجامعي للطالب أو البريد الوظيفي للموظف';$('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth')}));
 $('headLogin').addEventListener('click',()=>{authLoginMode='department_head';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول رئيس القسم';$('loginIdentifierLabel').textContent='البريد الوظيفي لرئيس القسم';$('loginIdentifier').placeholder='البريد الوظيفي لرئيس القسم';go('auth');$('loginIdentifier').focus({preventScroll:true})});
 $('supervisorLogin').addEventListener('click',()=>{authLoginMode='supervisor';$('showSupervisorSignupBtn').classList.remove('hidden');$('showSignupBtn').classList.add('hidden');$('showResetBtn').classList.add('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';$('loginIdentifierLabel').textContent='رقم الهوية الوطنية للمشرف';$('loginIdentifier').placeholder='رقم الهوية الوطنية للمشرف';go('auth');$('loginIdentifier').focus({preventScroll:true})});
