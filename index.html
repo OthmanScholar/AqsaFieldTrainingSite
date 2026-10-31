@@ -636,7 +636,7 @@ async function loadSupervisorDashboard(){
   if(directoryError)throw directoryError;if(profileError)throw profileError;
   let profile=existing;
   if(!profile){
-   const seed={user_id:uid,full_name:directory?.name||meta.full_name||meta.name||'المشرف',phone:directory?.phone||'',specialty:directory?.specialty||''};
+   const seed={user_id:uid,full_name:directory?.name||meta.full_name||meta.name||'المشرف',phone:directory?.phone||'',specialty:directory?.specialty||'',last_login_at:currentSession.user.last_sign_in_at||null};
    const {data,error}=await sb.from('supervisor_profiles').insert(seed).select().single();
    if(error)throw error;profile=data;
   }
@@ -1106,6 +1106,7 @@ async function loadSupervisorVisitEntry(){
     const {error}=await sb.rpc('save_supervisor_training_visit',{p_student_user_id:studentId,p_semester_code:semester,p_visit_number:visitNumber,p_visit_date:visitDate,p_visit_type:'ميدانية',p_visit_notes:notes});
     if(error)throw error;
     showNotice('تم حفظ الزيارة بنجاح.','success');
+    await logSupervisorActivity('visit_saved','تسجيل زيارة ميدانية للطالب');
     $('supervisorVisitForm').reset();
    }catch(err){showNotice('تعذر حفظ الزيارة: '+(err.message||'تحقق من صلاحية تسجيل الزيارات.') ,'error')}
    finally{button.disabled=false;button.textContent='حفظ الزيارة'}
