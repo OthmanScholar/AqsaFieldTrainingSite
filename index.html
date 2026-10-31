@@ -849,7 +849,43 @@ async function loadStudentNotifications(){
 }
 function openReportsPlaceholder(){
  const out=$('staffResults')||$('studentReportsArea');
- if(out){out.innerHTML='<section class="card" style="border:1px solid #d8b46a"><h3>📈 التقارير</h3><p class="muted">تم تجهيز قسم التقارير. سيتم تحديد محتوياته ووظائفه لاحقًا.</p></section>';out.scrollIntoView({behavior:'smooth',block:'nearest'});}
+ if(!out)return;
+ out.innerHTML='<section class="card"><h3>📈 التقارير</h3><div class="card" style="background:#f7f9fc"><h4>تقرير المشرفين</h4><p class="muted">كشف بالمشرفين الذين لديهم طلبة مسندون خلال الفصل الدراسي المحدد.</p><div class="grid2"><div class="field"><label for="supervisorReportStart">بداية الفصل الدراسي</label><input type="date" id="supervisorReportStart" required></div><div class="field"><label for="supervisorReportEnd">نهاية الفصل الدراسي</label><input type="date" id="supervisorReportEnd" required></div></div><button class="btn gold" id="runSupervisorReport" type="button">عرض تقرير المشرفين</button></div><div id="supervisorReportResults"></div></section>';
+ $('runSupervisorReport').onclick=loadSupervisorReport;
+ out.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function loadSupervisorReport(){
+ const start=$('supervisorReportStart')?.value,end=$('supervisorReportEnd')?.value,out=$('supervisorReportResults');
+ if(!start||!end){showNotice('حدد بداية الفصل ونهايته أولًا.','error');return}
+ if(start>end){showNotice('تاريخ بداية الفصل يجب أن يسبق تاريخ نهايته.','error');return}
+ out.innerHTML='<p>جارٍ إعداد تقرير المشرفين...</p>';
+ const from=new Date(start+'T00:00:00').toISOString(),to=new Date(end+'T23:59:59.999').toISOString();
+ const {data:assignments,error}=await sb.from('supervisor_assignments').select('supervisor_user_id,student_user_id,specialty_id,created_at').gte('created_at',from).lte('created_at',to).limit(5000);
+ if(error){out.innerHTML='<p class="notice show error">تعذر تحميل التكليفات: '+esc(error.message)+'</p>';return}
+ const rows=assignments||[];
+ if(!rows.length){out.innerHTML='<p class="muted">لا توجد تكليفات لمشرفين خلال الفترة المحددة.</p>';return}
+ const supervisorIds=[...new Set(rows.map(x=>x.supervisor_user_id).filter(Boolean))],studentIds=[...new Set(rows.map(x=>x.student_user_id).filter(Boolean))],specialtyIds=[...new Set(rows.map(x=>x.specialty_id).filter(Boolean))];
+ const [pubRes,profileRes,studentRes,specRes]=await Promise.all([
+  sb.from('public_supervisors').select('user_id,name,phone,specialty,national_id,academic_degree').in('user_id',supervisorIds),
+  sb.from('supervisor_profiles').select('user_id,full_name,phone,specialty').in('user_id',supervisorIds),
+  sb.from('student_profiles').select('user_id,specialty_id').in('user_id',studentIds),
+  specialtyIds.length?sb.from('specialties').select('id,name').in('id',specialtyIds):Promise.resolve({data:[],error:null})
+ ]);
+ const dataError=pubRes.error||profileRes.error||studentRes.error||specRes.error;
+ if(dataError){out.innerHTML='<p class="notice show error">تعذر تحميل بيانات المشرفين أو التخصصات: '+esc(dataError.message)+'</p>';return}
+ const pubMap=new Map((pubRes.data||[]).map(x=>[x.user_id,x])),profileMap=new Map((profileRes.data||[]).map(x=>[x.user_id,x])),studentMap=new Map((studentRes.data||[]).map(x=>[x.user_id,x])),specialtyMap=new Map((specRes.data||[]).map(x=>[String(x.id),x.name]));
+ const grouped=new Map();
+ rows.forEach(a=>{
+  if(!grouped.has(a.supervisor_user_id))grouped.set(a.supervisor_user_id,{students:new Set(),specialties:new Set()});
+  const g=grouped.get(a.supervisor_user_id);g.students.add(a.student_user_id);
+  const sid=a.specialty_id||studentMap.get(a.student_user_id)?.specialty_id;if(sid)g.specialties.add(specialtyMap.get(String(sid))||'تخصص غير محدد');
+ });
+ const report=[...grouped.entries()].map(([uid,g])=>{
+  const p=pubMap.get(uid)||{},profile=profileMap.get(uid)||{};
+  return {name:p.name||profile.full_name||'اسم غير مسجل',count:g.students.size,specialty:[...g.specialties].join('، ')||p.specialty||profile.specialty||'غير محدد',degree:p.academic_degree||'غير مسجلة',nationalId:p.national_id||'غير مسجل',phone:p.phone||profile.phone||'غير مسجل'};
+ }).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+ out.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h4>تقرير المشرفين</h4><button class="btn" type="button" id="printSupervisorReport">طباعة / حفظ PDF</button></div><p class="muted">الفترة: '+esc(start)+' إلى '+esc(end)+' — عدد المشرفين: '+report.length+' — إجمالي الطلبة: '+report.reduce((n,x)=>n+x.count,0)+'</p><div class="tablewrap"><table id="supervisorReportTable"><thead><tr><th>اسم المشرف</th><th>عدد الطلاب</th><th>القسم المختص</th><th>الدرجة العلمية</th><th>رقم الهوية</th><th>رقم الجوال</th></tr></thead><tbody>'+report.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.count+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.degree)+'</td><td>'+esc(x.nationalId)+'</td><td>'+esc(x.phone)+'</td></tr>').join('')+'</tbody></table></div></div>';
+ $('printSupervisorReport').onclick=()=>{const w=window.open('','_blank');if(!w){showNotice('اسمح بالنوافذ المنبثقة لطباعة التقرير.','error');return}w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير المشرفين</title><style>body{font-family:Arial,sans-serif;padding:24px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #777;padding:9px;text-align:right}th{background:#eee}</style></head><body><h2>تقرير المشرفين</h2><p>الفترة: '+start+' إلى '+end+'</p>'+document.getElementById('supervisorReportTable').outerHTML+'</body></html>');w.document.close();w.focus();w.print()};
 }
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
 const authMeta=currentSession.user.user_metadata||{};
