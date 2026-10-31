@@ -1518,7 +1518,7 @@ async function loadSupervisorForms(){
 async function loadEvidence(){
  const r=$('staffResults');
  r.innerHTML='<p>جارٍ تحميل إثباتات الساعات...</p>';
- const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,storage_path,claimed_completed_hours,review_status,review_note,exception_reason,created_at').order('created_at',{ascending:false}).limit(200);
+ const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,storage_path,claimed_completed_hours,review_status,review_note,exception_reason,created_at').eq('review_status','pending').order('created_at',{ascending:false}).limit(200);
  if(error){r.textContent='تعذر تحميل الإثباتات: '+error.message;return}
  const evidence=data||[];
  if(!evidence.length){r.innerHTML='<p class="muted">لا توجد إثباتات ساعات مقدمة حتى الآن.</p>';return}
