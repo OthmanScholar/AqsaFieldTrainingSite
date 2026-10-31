@@ -93,82 +93,35 @@
 
 /* Unified homepage hub: one continuous panel instead of separate cards */
 body.supervisor-mode .home-hub{display:none!important}
-/* Refined home hub: calm academic palette, individual access cards */
-.home-hub{background:linear-gradient(180deg,#f4f8fc,#edf3f9);color:#173f66;border:1px solid #d7e2ef;border-radius:26px;padding:clamp(22px,3vw,38px);box-shadow:0 16px 42px #12365d14;margin-top:28px;margin-bottom:34px}
-.home-hub .hub-heading{text-align:center;color:#173f66;margin:0 0 18px;font-size:clamp(1.35rem,2.5vw,1.85rem)}
-.home-hub .hub-heading:after{content:"";display:block;width:64px;height:4px;border-radius:9px;background:#d8b46a;margin:12px auto 0}
-.home-hub .team-profiles{margin:18px auto 28px;gap:16px}
-.home-hub .team-profile{background:#fff;border:1px solid #dfe8f1;border-radius:18px;box-shadow:0 6px 18px #12365d0c;padding:14px 16px;color:#173f66}
-.home-hub .team-profile h3{color:#1f5d91}
-.home-hub .team-profile p,.home-hub .team-profile a{color:#5d7188}
+/* Home hub: preserve blue leadership area; distinguish only the three service tiles */
+body.supervisor-mode .home-hub{display:none!important}
+.home-hub{background:linear-gradient(135deg,#245b91,#12365d);color:#fff;border:1px solid #d8b46a;border-radius:24px;padding:clamp(20px,3vw,36px);box-shadow:0 18px 44px #12365d2b;margin-top:28px;margin-bottom:30px}
+.home-hub .hub-heading{text-align:center;color:#ffe4a0;margin:0 0 10px;font-size:clamp(1.25rem,2.5vw,1.8rem)}
+.home-hub .team-profiles{margin:18px auto 24px;gap:18px}
+.home-hub .team-profile{background:transparent;border:0;border-radius:0;box-shadow:none;padding:12px 16px;color:#fff}
+.home-hub .team-profile h3{color:#ffe4a0}
+.home-hub .team-profile p,.home-hub .team-profile a{color:#fff}
 .home-hub .team-profile img{border-color:#d8b46a;background:#fff}
-.home-hub .hub-options{margin:0;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr));border:0;padding:0}
-.home-hub .hub-options .card{background:#fff;border:1px solid #dce6f0;border-radius:20px;box-shadow:0 8px 24px #12365d0d;color:#173f66;min-height:230px;padding:24px 18px;align-items:center;text-align:center;transform:none;position:relative;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
-.home-hub .hub-options .card:before{content:"";position:absolute;top:0;inset-inline:22%;height:4px;border-radius:0 0 8px 8px;background:linear-gradient(90deg,#d8b46a,#2d6b9f)}
-.home-hub .hub-options .card:hover{transform:translateY(-5px);box-shadow:0 16px 30px #12365d18;border-color:#b9cde0}
-.home-hub .hub-options .card:not(:last-child){border-inline-end:1px solid #dce6f0}
-.home-hub .hub-options .card h3{color:#1c5687;margin:12px 0 4px;font-size:1.12rem}
-.home-hub .hub-options .card p{color:#63768b;opacity:1;line-height:1.8;max-width:300px}
-.home-hub .hub-options .emoji{width:68px;height:68px;display:grid;place-items:center;border-radius:20px;background:#eaf2fa;border:1px solid #d4e2f0;color:#245b91;font-size:0}
+.home-hub .hub-options{margin:0;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #ffffff45;padding-top:20px}
+.home-hub .hub-options .card{border:1px solid transparent;border-radius:19px;box-shadow:0 10px 24px #071f381c;color:#173f66;min-height:225px;padding:22px 18px;align-items:center;text-align:center;transform:none;transition:transform .2s ease,box-shadow .2s ease}
+.home-hub .hub-options .card:nth-child(1){background:#e8f4f0;border-color:#c8e3d9}
+.home-hub .hub-options .card:nth-child(2){background:#edf0fa;border-color:#d5dcf1}
+.home-hub .hub-options .card:nth-child(3){background:#fbf1df;border-color:#f0dfbd}
+.home-hub .hub-options .card:hover{transform:translateY(-5px);box-shadow:0 16px 30px #071f382b}
+.home-hub .hub-options .card:not(:last-child){border-inline-end:1px solid transparent}
+.home-hub .hub-options .card h3{color:#173f66;margin:12px 0 4px;font-size:1.12rem}
+.home-hub .hub-options .card p{color:#53677c;opacity:1;line-height:1.8;max-width:300px}
+.home-hub .hub-options .emoji{width:66px;height:66px;display:grid;place-items:center;border-radius:18px;background:#fff;border:1px solid #d9e4ed;color:#245b91;font-size:0;box-shadow:0 5px 14px #12365d0d}
 .home-hub .hub-options .emoji svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.home-hub .hub-options .card:nth-child(1) .emoji{background:#eaf4f1;color:#287b68;border-color:#d4e8e1}
-.home-hub .hub-options .card:nth-child(2) .emoji{background:#eef1fa;color:#4c5f9c;border-color:#dce2f3}
-.home-hub .hub-options .card:nth-child(3) .emoji{background:#fbf4e8;color:#a8792c;border-color:#f0e2c7}
-.home-hub .hub-options .card .btn{background:#245b91;color:#fff;margin-top:12px;border-radius:11px;min-width:150px;padding:10px 18px;box-shadow:0 5px 12px #245b9120}
-.home-hub .hub-options .card:nth-child(2) .btn{background:#4d659b}
-.home-hub .hub-options .card:nth-child(3) .btn{background:#b4863b}
+.home-hub .hub-options .card:nth-child(1) .emoji{color:#287b68;background:#fff;border-color:#c8e3d9}
+.home-hub .hub-options .card:nth-child(2) .emoji{color:#4c5f9c;background:#fff;border-color:#d5dcf1}
+.home-hub .hub-options .card:nth-child(3) .emoji{color:#a8792c;background:#fff;border-color:#f0dfbd}
+.home-hub .hub-options .card .btn{background:#287b68;color:#fff;margin-top:12px;border-radius:10px;min-width:145px;padding:10px 18px;box-shadow:none}
+.home-hub .hub-options .card:nth-child(2) .btn{background:#4c5f9c}
+.home-hub .hub-options .card:nth-child(3) .btn{background:#a8792c}
 .home-hub .hub-options .card .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
-@media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}.home-hub .hub-options .card:nth-child(2){border-inline-end:1px solid #dce6f0}}
-@media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:10px}.home-hub .team-profile{padding:10px}.home-hub .team-profile img{width:76px;height:76px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:4px}.home-hub .hub-options .card{padding:20px 12px;min-height:unset;border-inline-end:1px solid #dce6f0!important;border-bottom:1px solid #dce6f0}.home-hub .hub-options .card:last-child{border-bottom:1px solid #dce6f0}}
-
-/* Role-specific supervisor workspace within the main site */
-.login-shortcuts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.login-shortcuts .btn{white-space:nowrap}
-body.supervisor-mode .topbar{min-height:58px;justify-content:center;padding:9px 18px}
-body.supervisor-mode .topbar .brand,body.supervisor-mode .topbar .nav,body.supervisor-mode .topbar .topright{display:none!important}
-body.supervisor-mode .topbar:after{content:"بوابة المشرف | نظام إدارة التدريب الميداني";font-weight:900;color:#fff;font-size:1.05rem}
-body.supervisor-mode #home>.hero,body.supervisor-mode #home>.home-hub{display:none!important}
-body.supervisor-mode #home>.wrap>section:not(#portalPanel),body.supervisor-mode #home>.wrap>div>section:not(#portalPanel){display:none!important}
-body.supervisor-mode #portalPanel{display:block!important;max-width:1100px;margin:20px auto;padding:clamp(14px,2vw,24px);background:transparent;border:0;box-shadow:none}
-body.supervisor-mode #portalPanel>h2{display:none}
-body.supervisor-mode #portalPanel .supervisor-dashboard{max-width:100%}
-body.supervisor-mode #portalPanel .supervisor-toolbar{margin-bottom:18px}
-body.supervisor-mode #portalPanel .supervisor-work-card{min-height:200px}
-@media(max-width:650px){.login-shortcuts{gap:5px}.login-shortcuts .btn{padding:8px 10px;font-size:.8rem}}
-/* Compact supervisor workspace and account dropdown */
-body.supervisor-mode main:before{display:none}
-body.supervisor-mode #portalPanel{max-width:1100px;margin:0 auto;padding:clamp(14px,2vw,24px)}
-body.supervisor-mode #portalPanel>h2{display:none}
-.supervisor-dashboard{display:grid;gap:16px}
-.supervisor-toolbar{direction:ltr;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 0 18px;position:relative;z-index:5}
-.supervisor-toolbar-title{direction:rtl;text-align:right;align-self:center}
-.supervisor-toolbar-title h2{margin:0;color:#173f66;font-size:1.45rem}
-.supervisor-toolbar-title p{margin:3px 0 0;color:var(--muted);font-size:.9rem}
-.supervisor-account-menu{direction:rtl;position:relative;flex:0 0 auto}
-.supervisor-account-menu>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:5px 10px 5px 7px;background:#fff;box-shadow:0 3px 12px #12365d10;max-width:230px}
-.supervisor-account-menu>summary::-webkit-details-marker{display:none}
-.supervisor-menu-avatar,.supervisor-menu-placeholder{width:38px;height:38px;flex:0 0 38px;object-fit:cover;border-radius:50%;border:2px solid var(--gold);background:#edf3f9}
-.supervisor-menu-placeholder{display:grid;place-items:center;font-size:1.3rem}
-.supervisor-menu-name{font-size:.88rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:135px;color:#173f66}
-.supervisor-menu-caret{color:var(--muted);font-size:1rem}
-.supervisor-dropdown{position:absolute;top:calc(100% + 9px);left:0;width:min(360px,calc(100vw - 36px));max-height:min(75vh,680px);overflow:auto;background:white;border:1px solid var(--line);border-radius:15px;box-shadow:0 18px 45px #12365d25;padding:13px;direction:rtl;z-index:20}
-.supervisor-menu-section{padding:7px 5px 10px;border-bottom:1px solid var(--line);margin-bottom:8px}
-.supervisor-menu-section strong{color:#173f66}
-.supervisor-menu-section p{margin:5px 0;font-size:.84rem;color:var(--muted);line-height:1.6}
-.supervisor-submenu{border-bottom:1px solid var(--line);padding:8px 2px}
-.supervisor-submenu>summary{cursor:pointer;font-weight:800;color:#244f77;padding:5px}
-.supervisor-submenu-body{padding:8px 5px}
-.supervisor-submenu-body .field{margin:7px 0}
-.supervisor-submenu-body .field input{padding:8px}
-.supervisor-change-photo{display:flex;align-items:center;gap:10px;border:0;background:#f4f7fb;border-radius:10px;padding:8px 12px;width:100%;text-align:right;color:#244f77;font-weight:800}
-.supervisor-change-photo .supervisor-menu-avatar,.supervisor-change-photo .supervisor-menu-placeholder{width:44px;height:44px;flex-basis:44px}
-.supervisor-logout{width:100%;margin-top:10px}
-.supervisor-work-card{min-height:180px}
-.supervisor-work-card h3{margin:0 0 14px;color:#173f66}
-.supervisor-work-card .service-buttons{max-width:850px}
-.supervisor-work-card #staffResults{margin-top:18px}
-@media(max-width:600px){.supervisor-toolbar{align-items:center;gap:8px}.supervisor-toolbar-title h2{font-size:1.15rem}.supervisor-toolbar-title p{font-size:.78rem}.supervisor-account-menu>summary{padding:4px 7px 4px 5px}.supervisor-menu-name{max-width:85px;font-size:.8rem}.supervisor-menu-avatar,.supervisor-menu-placeholder{width:34px;height:34px;flex-basis:34px}.supervisor-dropdown{position:fixed;top:82px;left:12px;right:12px;width:auto;max-height:calc(100vh - 105px)}}
-
+@media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:4px}.home-hub .team-profile{padding:10px 4px}.home-hub .team-profile img{width:82px;height:82px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:12px}.home-hub .hub-options .card{padding:20px 12px;min-height:unset}}
 </style>
 </head>
 <body>
