@@ -802,8 +802,8 @@ async function loadSupervisorDashboard(){
      ''+
     '</div></details></div>'+
    '<section class="card supervisor-work-card"><h3>الصلاحيات والخدمات المتاحة للمشرف</h3><div class="permission-tiles"><button class="permission-tile" id="supervisorVisitEntry"><span class="permission-icon">📝</span><span>إدخال الزيارات</span></button><button class="permission-tile" id="supervisorStudentNames"><span class="permission-icon">👥</span><span>أسماء الطلبة</span></button><button class="permission-tile" id="supervisorStudentSearch"><span class="permission-icon">🔎</span><span>استعلام عن طالب</span></button></div><div id="staffResults"></div></section></div>';
-  $('supervisorPhotoButton').onclick=()=>$('supervisorPhotoInput').click();
-  $('supervisorPhotoInput').onchange=async e=>{
+  if($('supervisorPhotoButton')&&$('supervisorPhotoInput'))$('supervisorPhotoButton').onclick=()=>$('supervisorPhotoInput').click();
+  if($('supervisorPhotoInput'))$('supervisorPhotoInput').onchange=async e=>{
    const file=e.target.files?.[0];if(!file)return;
    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){showNotice('اختر صورة JPG أو PNG أو WebP لا يتجاوز حجمها 5MB.','error');e.target.value='';return}
    const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg',path=uid+'/profile-'+Date.now()+'.'+ext;
@@ -813,18 +813,18 @@ async function loadSupervisorDashboard(){
     await logSupervisorActivity('photo_update','تحديث الصورة الشخصية');showNotice('تم تحديث الصورة الشخصية.','success');await loadSupervisorDashboard();
    }catch(err){showNotice('تعذر رفع الصورة: '+(err.message||'تحقق من الاتصال والصلاحيات.'),'error')}
   };
-  $('supervisorProfileForm').onsubmit=async e=>{e.preventDefault();const full_name=$('supervisorProfileName').value.trim(),phone=$('supervisorProfilePhone').value.trim();if(!full_name){showNotice('أدخل الاسم الرباعي.','error');return}
+  if($('supervisorProfileForm'))$('supervisorProfileForm').onsubmit=async e=>{e.preventDefault();const full_name=$('supervisorProfileName').value.trim(),phone=$('supervisorProfilePhone').value.trim();if(!full_name){showNotice('أدخل الاسم الرباعي.','error');return}
    const {error}=await sb.from('supervisor_profiles').update({full_name,phone,updated_at:new Date().toISOString()}).eq('user_id',uid);
    if(error){showNotice('تعذر حفظ البيانات: '+error.message,'error');return}
    await logSupervisorActivity('profile_update','تعديل البيانات الأساسية');showNotice('تم حفظ البيانات الأساسية.','success');await loadSupervisorDashboard();
   };
-  $('supervisorPasswordForm').onsubmit=async e=>{e.preventDefault();const a=$('supervisorNewPassword').value,b=$('supervisorConfirmPassword').value;if(a.length<10){showNotice('كلمة المرور يجب ألا تقل عن 10 أحرف.','error');return}if(a!==b){showNotice('كلمتا المرور غير متطابقتين.','error');return}
+  if($('supervisorPasswordForm'))$('supervisorPasswordForm').onsubmit=async e=>{e.preventDefault();const a=$('supervisorNewPassword').value,b=$('supervisorConfirmPassword').value;if(a.length<10){showNotice('كلمة المرور يجب ألا تقل عن 10 أحرف.','error');return}if(a!==b){showNotice('كلمتا المرور غير متطابقتين.','error');return}
    const {data,error}=await sb.auth.updateUser({password:a});if(error||!data?.user){showNotice(error?.message||'لم يؤكد النظام تحديث كلمة المرور.','error');return}
    $('supervisorPasswordForm').reset();await logSupervisorActivity('password_change','تغيير كلمة مرور الحساب');showNotice('تم تغيير كلمة المرور بنجاح.','success');await loadSupervisorDashboard();
   };
-  $('supervisorVisitEntry').onclick=()=>{logSupervisorActivity('visit_form_open','فتح نموذج إدخال الزيارات');loadSupervisorVisitEntry()};
-  $('supervisorStudentNames').onclick=()=>{logSupervisorActivity('view_students','عرض أسماء الطلبة المسندين');loadAssigned()};
-  $('supervisorStudentSearch').onclick=()=>{logSupervisorActivity('student_search','فتح استعلام عن طالب');loadSupervisorStudentSearch()};
+  if($('supervisorVisitEntry'))$('supervisorVisitEntry').onclick=()=>{logSupervisorActivity('visit_form_open','فتح نموذج إدخال الزيارات');loadSupervisorVisitEntry()};
+  if($('supervisorStudentNames'))$('supervisorStudentNames').onclick=()=>{logSupervisorActivity('view_students','عرض أسماء الطلبة المسندين');loadAssigned()};
+  if($('supervisorStudentSearch'))$('supervisorStudentSearch').onclick=()=>{logSupervisorActivity('student_search','فتح استعلام عن طالب');loadSupervisorStudentSearch()};
  }catch(err){c.innerHTML='<div class="notice show error">تعذر تحميل لوحة المشرف: '+esc(err.message||'تحقق من صلاحيات الملف الشخصي وسجل النشاط.')+'</div>'}
 }
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
