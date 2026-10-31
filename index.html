@@ -122,6 +122,18 @@ body.supervisor-mode .home-hub{display:none!important}
 .home-hub .hub-options .card .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
 @media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:4px}.home-hub .team-profile{padding:10px 4px}.home-hub .team-profile img{width:82px;height:82px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:12px}.home-hub .hub-options .card{padding:20px 12px;min-height:unset}}
+
+/* Leadership profiles: balanced, centered cards within the blue hub */
+.home-hub .team-profiles{width:min(940px,100%);grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch;justify-content:center;margin:22px auto 28px}
+.home-hub .team-profile{direction:rtl;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:17px;min-height:142px;padding:18px 22px;background:linear-gradient(135deg,#f8fbff,#eaf1f8);border:1px solid #d8e4ef;border-radius:20px;box-shadow:0 10px 24px #071f3826;color:#173f66;text-align:right}
+.home-hub .team-profile img{width:94px;height:94px;flex:0 0 94px;object-fit:cover;border:3px solid #d8b46a;border-radius:50%;background:#fff;box-shadow:0 4px 12px #173f6620}
+.home-hub .team-profile>div{flex:1;min-width:0}
+.home-hub .team-profile h3{font-size:1.12rem;line-height:1.5;margin:0 0 5px;color:#1e5686}
+.home-hub .team-profile p{font-size:.91rem;line-height:1.65;margin:3px 0;color:#526b83}
+.home-hub .team-profile a{display:inline-block;margin-top:3px;color:#245b91;font-weight:800;direction:ltr}
+@media(max-width:760px){.home-hub .team-profiles{grid-template-columns:1fr;width:min(520px,100%);gap:12px}.home-hub .team-profile{min-height:122px;padding:14px 17px}.home-hub .team-profile img{width:82px;height:82px;flex-basis:82px}}
+@media(max-width:600px){.home-hub .team-profile{justify-content:flex-start;gap:13px}.home-hub .team-profile h3{font-size:1rem}.home-hub .team-profile p{font-size:.86rem}}
+
 </style>
 </head>
 <body>
