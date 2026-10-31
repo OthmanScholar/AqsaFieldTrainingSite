@@ -1296,11 +1296,11 @@ async function fetchSupervisorAssignedStudents(){
  const entities=new Map((entitiesResult.data||[]).map(x=>[String(x.id),x]));
  currentSupervisorAssignedStudents=rows.map(a=>{
   const p=profiles.get(a.student_user_id)||{},request=requestMap.get(a.student_user_id)||{},pref=preferenceMap.get(a.student_user_id)||{};
-  const entityId=a.training_entity_id||(['approved','exception_approved'].includes(request.request_status)?request.training_entity_id:null)||pref.preferred_training_entity_id;
+  const entityId=pref.preferred_training_entity_id||(['approved','exception_approved'].includes(request.request_status)?request.training_entity_id:null)||a.training_entity_id;
   const entity=entities.get(String(entityId))||{};
   const proposedName=pref.proposed_entity_name||'';
   const proposedLocation=pref.proposed_entity_location||'';
-  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entity.name||proposedName||p.student_area||'—',training_entity_name:entity.name||proposedName||'—',training_entity_type:entity.entity_type||pref.training_type||'—',training_address:entity.address||proposedLocation||'—',training_governorate:entity.governorate||pref.student_area||'—',student_area:p.student_area||pref.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
+  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entity.name||'—',training_entity_name:proposedName||'—',training_entity_type:entity.name||'—',training_address:proposedLocation||'—',training_governorate:pref.student_area||p.student_area||'—',student_area:p.student_area||pref.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
  });
  return currentSupervisorAssignedStudents;
 }
