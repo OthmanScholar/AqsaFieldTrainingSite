@@ -532,6 +532,13 @@ async function acceptAuthSession(result){
  const {error}=await sb.auth.setSession({access_token:result.session.access_token,refresh_token:result.session.refresh_token});
  if(error)throw new Error(error.message);
  await refreshSession();
+ if(currentRole==='supervisor'&&currentSession?.user?.id){
+  const uid=currentSession.user.id,now=new Date().toISOString();
+  const {data:directory}=await sb.from('public_supervisors').select('name,phone,specialty').eq('user_id',uid).maybeSingle();
+  const {error:profileError}=await sb.from('supervisor_profiles').upsert({user_id:uid,full_name:directory?.name||currentSession.user.user_metadata?.full_name||'المشرف',phone:directory?.phone||'',specialty:directory?.specialty||'',last_login_at:now,updated_at:now},{onConflict:'user_id'});
+  if(profileError)console.warn('Could not update supervisor login timestamp',profileError);
+  await sb.from('supervisor_activity_log').insert({supervisor_user_id:uid,action_type:'login',description:'تسجيل الدخول إلى بوابة المشرف'});
+ }
  go('portal');
 }
 $('signupForm').addEventListener('submit',async e=>{
@@ -673,7 +680,7 @@ async function loadSupervisorDashboard(){
   $('supervisorVisitEntry').onclick=()=>{logSupervisorActivity('visit_form_open','فتح نموذج إدخال الزيارات');loadSupervisorVisitEntry()};
   $('supervisorStudentNames').onclick=()=>{logSupervisorActivity('view_students','عرض أسماء الطلبة المسندين');loadAssigned()};
   $('supervisorStudentSearch').onclick=()=>{logSupervisorActivity('student_search','فتح استعلام عن طالب');loadSupervisorStudentSearch()};
-  await logSupervisorActivity('view_students','فتح لوحة المشرف والمهام');
+  
  }catch(err){c.innerHTML='<div class="notice show error">تعذر تحميل لوحة المشرف: '+esc(err.message||'تحقق من صلاحيات الملف الشخصي وسجل النشاط.')+'</div>'}
 }
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
