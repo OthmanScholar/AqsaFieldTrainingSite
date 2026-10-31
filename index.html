@@ -874,14 +874,20 @@ async function loadAcademicSemestersManager(){
 function openReportsPlaceholder(){
  const out=$('staffResults')||$('studentReportsArea');
  if(!out)return;
- out.innerHTML='<section class="card"><h3>📈 التقارير</h3><div class="card" style="background:#f7f9fc"><h4>تقرير المشرفين</h4><p class="muted">كشف بالمشرفين الذين لديهم طلبة مسندون خلال الفصل الدراسي المحدد.</p><div class="field"><label for="supervisorReportSemester">الفصل الدراسي</label><select id="supervisorReportSemester"><option value="2026-1" selected>الفصل الأول 2026/2027</option></select></div><button class="btn gold" id="runSupervisorReport" type="button">عرض تقرير المشرفين</button></div><div id="supervisorReportResults"></div></section>';
+ out.innerHTML='<section class="card"><h3>📈 التقارير</h3><div class="card" style="background:#f7f9fc"><h4>تقرير المشرفين</h4><p class="muted">كشف بالمشرفين الذين لديهم طلبة مسندون خلال الفصل الدراسي المحدد.</p><div class="field"><label for="supervisorReportSemester">الفصل الدراسي</label><select id="supervisorReportSemester"><option value="">جارٍ تحميل الفصول الدراسية...</option></select></div><button class="btn gold" id="runSupervisorReport" type="button">عرض تقرير المشرفين</button></div><div id="supervisorReportResults"></div></section>';
  $('runSupervisorReport').onclick=loadSupervisorReport;
+ const {data:semesters,error:semesterError}=await sb.from('academic_semesters').select('semester_code,semester_name,is_active').order('start_date',{ascending:false});
+ const semesterSelect=$('supervisorReportSemester');
+ if(semesterError)semesterSelect.innerHTML='<option value="">تعذر تحميل الفصول</option>';
+ else semesterSelect.innerHTML=(semesters||[]).map(x=>'<option value="'+esc(x.semester_code)+'" '+(x.is_active?'selected':'')+'>'+esc(x.semester_name)+'</option>').join('')||'<option value="">لا توجد فصول مسجلة</option>';
  // Keep the permission menu in its normal place; render report content below it without jumping the page.
 }
 async function loadSupervisorReport(){
  const semester=$('supervisorReportSemester')?.value,out=$('supervisorReportResults');
  if(!semester){showNotice('اختر الفصل الدراسي أولًا.','error');return}
- const semesterLabel=semester==='2026-1'?'الفصل الأول 2026/2027':semester;
+ const {data:semesterInfo,error:semesterInfoError}=await sb.from('academic_semesters').select('semester_name').eq('semester_code',semester).maybeSingle();
+ if(semesterInfoError){out.innerHTML='<p class="notice show error">'+esc(semesterInfoError.message)+'</p>';return}
+ const semesterLabel=semesterInfo?.semester_name||semester;
  out.innerHTML='<p>جارٍ إعداد تقرير المشرفين...</p>';
  const {data:assignments,error}=await sb.from('supervisor_assignments').select('supervisor_user_id,student_user_id,specialty_id,created_at,semester_code').eq('semester_code',semester).limit(5000);
  if(error){out.innerHTML='<p class="notice show error">تعذر تحميل التكليفات: '+esc(error.message)+'</p>';return}
