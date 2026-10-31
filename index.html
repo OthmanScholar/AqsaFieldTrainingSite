@@ -93,22 +93,33 @@
 
 /* Unified homepage hub: one continuous panel instead of separate cards */
 body.supervisor-mode .home-hub{display:none!important}
-.home-hub{background:linear-gradient(135deg,var(--wine),var(--dark));color:#fff;border:1px solid #d8b46a;border-radius:24px;padding:clamp(20px,3vw,36px);box-shadow:0 18px 44px #12365d2b;margin-top:28px;margin-bottom:30px}
-.home-hub .hub-heading{text-align:center;color:var(--gold);margin:0 0 10px;font-size:clamp(1.25rem,2.5vw,1.8rem)}
-.home-hub .team-profiles{margin:18px auto 24px;gap:18px}
-.home-hub .team-profile{background:transparent;border:0;border-radius:0;box-shadow:none;padding:12px 16px;color:#fff}
-.home-hub .team-profile h3{color:var(--gold)}
-.home-hub .team-profile p,.home-hub .team-profile a{color:#fff}
-.home-hub .team-profile img{border-color:var(--gold);background:#fff}
-.home-hub .hub-options{margin:0;gap:0;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #ffffff45;padding-top:18px}
-.home-hub .hub-options .card{background:transparent;border:0;border-radius:0;box-shadow:none;color:#fff;min-height:unset;padding:14px 20px;align-items:center;text-align:center;transform:none}
-.home-hub .hub-options .card:not(:last-child){border-inline-end:1px solid #ffffff35}
-.home-hub .hub-options .card h3{color:var(--gold);margin-top:7px}
-.home-hub .hub-options .card p{color:#fff;opacity:.9}
-.home-hub .hub-options .card .btn{background:var(--gold);color:var(--dark);margin-top:10px}
-.home-hub .hub-options .card .btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
-@media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}.home-hub .hub-options .card:nth-child(2){border-inline-end:0}}
-@media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:4px}.home-hub .team-profile{padding:10px 4px}.home-hub .team-profile img{width:82px;height:82px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:8px}.home-hub .hub-options .card{padding:18px 8px;border-inline-end:0!important;border-bottom:1px solid #ffffff35}.home-hub .hub-options .card:last-child{border-bottom:0}}
+/* Refined home hub: calm academic palette, individual access cards */
+.home-hub{background:linear-gradient(180deg,#f4f8fc,#edf3f9);color:#173f66;border:1px solid #d7e2ef;border-radius:26px;padding:clamp(22px,3vw,38px);box-shadow:0 16px 42px #12365d14;margin-top:28px;margin-bottom:34px}
+.home-hub .hub-heading{text-align:center;color:#173f66;margin:0 0 18px;font-size:clamp(1.35rem,2.5vw,1.85rem)}
+.home-hub .hub-heading:after{content:"";display:block;width:64px;height:4px;border-radius:9px;background:#d8b46a;margin:12px auto 0}
+.home-hub .team-profiles{margin:18px auto 28px;gap:16px}
+.home-hub .team-profile{background:#fff;border:1px solid #dfe8f1;border-radius:18px;box-shadow:0 6px 18px #12365d0c;padding:14px 16px;color:#173f66}
+.home-hub .team-profile h3{color:#1f5d91}
+.home-hub .team-profile p,.home-hub .team-profile a{color:#5d7188}
+.home-hub .team-profile img{border-color:#d8b46a;background:#fff}
+.home-hub .hub-options{margin:0;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr));border:0;padding:0}
+.home-hub .hub-options .card{background:#fff;border:1px solid #dce6f0;border-radius:20px;box-shadow:0 8px 24px #12365d0d;color:#173f66;min-height:230px;padding:24px 18px;align-items:center;text-align:center;transform:none;position:relative;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.home-hub .hub-options .card:before{content:"";position:absolute;top:0;inset-inline:22%;height:4px;border-radius:0 0 8px 8px;background:linear-gradient(90deg,#d8b46a,#2d6b9f)}
+.home-hub .hub-options .card:hover{transform:translateY(-5px);box-shadow:0 16px 30px #12365d18;border-color:#b9cde0}
+.home-hub .hub-options .card:not(:last-child){border-inline-end:1px solid #dce6f0}
+.home-hub .hub-options .card h3{color:#1c5687;margin:12px 0 4px;font-size:1.12rem}
+.home-hub .hub-options .card p{color:#63768b;opacity:1;line-height:1.8;max-width:300px}
+.home-hub .hub-options .emoji{width:68px;height:68px;display:grid;place-items:center;border-radius:20px;background:#eaf2fa;border:1px solid #d4e2f0;color:#245b91;font-size:0}
+.home-hub .hub-options .emoji svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.home-hub .hub-options .card:nth-child(1) .emoji{background:#eaf4f1;color:#287b68;border-color:#d4e8e1}
+.home-hub .hub-options .card:nth-child(2) .emoji{background:#eef1fa;color:#4c5f9c;border-color:#dce2f3}
+.home-hub .hub-options .card:nth-child(3) .emoji{background:#fbf4e8;color:#a8792c;border-color:#f0e2c7}
+.home-hub .hub-options .card .btn{background:#245b91;color:#fff;margin-top:12px;border-radius:11px;min-width:150px;padding:10px 18px;box-shadow:0 5px 12px #245b9120}
+.home-hub .hub-options .card:nth-child(2) .btn{background:#4d659b}
+.home-hub .hub-options .card:nth-child(3) .btn{background:#b4863b}
+.home-hub .hub-options .card .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+@media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}.home-hub .hub-options .card:nth-child(2){border-inline-end:1px solid #dce6f0}}
+@media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:10px}.home-hub .team-profile{padding:10px}.home-hub .team-profile img{width:76px;height:76px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:4px}.home-hub .hub-options .card{padding:20px 12px;min-height:unset;border-inline-end:1px solid #dce6f0!important;border-bottom:1px solid #dce6f0}.home-hub .hub-options .card:last-child{border-bottom:1px solid #dce6f0}}
 
 /* Role-specific supervisor workspace within the main site */
 .login-shortcuts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -179,9 +190,9 @@ body.supervisor-mode #portalPanel>h2{display:none}
   <article class="team-profile"><img src="dr-alaa.jpg.jpeg" alt="د. علاء عيد" loading="lazy"><div><h3>د. علاء عيد</h3><p>رئيس قسم التدريب الميداني</p><p><a href="tel:0593418641">0593418641</a></p></div></article>
  </div>
  <div class="cards hub-options">
-  <article class="card"><div class="emoji">🎓</div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
-  <article class="card"><div class="emoji">🧑‍🏫</div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
-  <article class="card"><div class="emoji">📄</div><h3>نماذج الطلاب</h3><p>نماذج التدريب المعتمدة للعرض والتحميل فقط.</p><button class="btn" data-go="documents">عرض النماذج</button></article>
+  <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 6h13M8 8h8M8 12h8M8 16h5"/></svg></div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
+  <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1.5a6.5 6.5 0 0 1 13 0V20z"/><path d="M17 10.5h5M19.5 8v5M17 16h5"/></svg></div><h3>المشرفون</h3><p>عرض دليل المشرفين والتخصصات ومناطق الإشراف.</p><button class="btn" data-go="supervisors">عرض المشرفين</button></article>
+  <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3.5 2.8 8.5 2.8 12 0v-5M22 9v6"/><path d="M22 15l-1 2"/></svg></div><h3>نماذج الطلاب</h3><p>نماذج التدريب المعتمدة للعرض والتحميل فقط.</p><button class="btn" data-go="documents">عرض النماذج</button></article>
  </div>
 </section>
 <div class="wrap">
