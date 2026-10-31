@@ -618,7 +618,7 @@ await fillEntitySelect();await fillPreferenceOptions();await loadStudentPreferen
 }else if(currentRole==='supervisor'){
  const supervisorMeta=currentSession.user.user_metadata||{};
  let supervisorName=supervisorMeta.full_name||supervisorMeta.name||'المشرف';
- const supervisorPhoto=[supervisorMeta.avatar_url,supervisorMeta.picture,supervisorMeta.photo_url,supervisorMeta.profile_image].find(v=>typeof v==='string'&&/^https?:\\/\\//i.test(v));
+ const supervisorPhoto=[supervisorMeta.avatar_url,supervisorMeta.picture,supervisorMeta.photo_url,supervisorMeta.profile_image].find(v=>typeof v==='string'&&/^https?:\/\//i.test(v));
  try{
   const {data:supervisorRecord}=await sb.from('public_supervisors').select('name').eq('user_id',currentSession.user.id).maybeSingle();
   if(supervisorRecord?.name)supervisorName=supervisorRecord.name;
