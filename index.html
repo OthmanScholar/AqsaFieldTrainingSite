@@ -947,7 +947,7 @@ async function saveStudentPreference(e){
  showNotice('تم حفظ بيانات التدريب المقترحة في قاعدة البيانات. اختيار المشرف والجهة لا يصبح تكليفًا رسميًا إلا بعد اعتماد الإدارة.','success');
 }
 async function submitRequest(e){e.preventDefault();const entity=$('requestEntity').value;if(!entity){showNotice('اختر جهة تدريب أولًا.','error');return}const {data:p}=await sb.from('student_profiles').select('specialty_id,eligibility_status,completed_hours').eq('user_id',currentSession.user.id).maybeSingle();if(!p||!['approved','exception_approved'].includes(p.eligibility_status)||(p.eligibility_status==='approved'&&Number(p.completed_hours||0)<36)){showNotice('لا يمكن إرسال الطلب قبل اعتماد أهلية التدريب وإثبات الساعات المطلوبة.','error');return}const {error}=await sb.from('training_registration_requests').insert({student_user_id:currentSession.user.id,specialty_id:p.specialty_id,training_entity_id:Number(entity),request_status:'pending'});if(error){showNotice(error.message,'error');return}showNotice('تم إرسال الطلب بنجاح.','success');renderPortal()}
-async function submitEvidence(e){e.preventDefault();const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value);if(!file)return;if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}const path=`${currentSession.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:currentSession.user.id,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});if(error){showNotice('تم رفع الملف لكن تعذّر تسجيل طلب المراجعة: '+error.message,'error');return}showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal()}
+async function submitEvidence(e){e.preventDefault();const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value);if(!file)return;const allowed=file.type==='application/pdf'||file.type.startsWith('image/');if(!allowed){showNotice('يُسمح برفع الصور أو ملفات PDF فقط.','error');return}if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}const path=`${currentSession.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:currentSession.user.id,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});if(error){showNotice('تم رفع الملف لكن تعذّر تسجيل طلب المراجعة: '+error.message,'error');return}showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal()}
 async function loadSupervisorAssignedView(r){
   r.innerHTML='<p>جارٍ تحميل بيانات الطلاب الذين اختاروك...</p>';
   try{
@@ -1199,7 +1199,7 @@ async function loadSupervisorForms(){
 async function loadEvidence(){
  const r=$('staffResults');
  r.innerHTML='<p>جارٍ تحميل إثباتات الساعات...</p>';
- const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,claimed_completed_hours,review_status,review_note,exception_reason,created_at').order('created_at',{ascending:false}).limit(200);
+ const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,storage_path,claimed_completed_hours,review_status,review_note,exception_reason,created_at').order('created_at',{ascending:false}).limit(200);
  if(error){r.textContent='تعذر تحميل الإثباتات: '+error.message;return}
  const evidence=data||[];
  if(!evidence.length){r.innerHTML='<p class="muted">لا توجد إثباتات ساعات مقدمة حتى الآن.</p>';return}
@@ -1207,10 +1207,17 @@ async function loadEvidence(){
  const pr=ids.length?await sb.from('student_profiles').select('user_id,full_name,university_number').in('user_id',ids):{data:[],error:null};
  if(pr.error){r.textContent='تعذر تحميل أسماء الطلاب: '+pr.error.message;return}
  const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
- r.innerHTML='<p><strong>عدد إثباتات الساعات:</strong> '+evidence.length+'</p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات المطلوبة</th><th>الحالة</th><th>الملاحظة</th><th>القرار</th></tr></thead><tbody>'+evidence.map(x=>{
+ const fileLinks=new Map();
+ await Promise.all(evidence.map(async x=>{
+  if(!x.storage_path)return;
+  const {data:signed,error:signedError}=await sb.storage.from('student-hour-evidence').createSignedUrl(x.storage_path,3600);
+  if(!signedError&&signed?.signedUrl)fileLinks.set(x.id,signed.signedUrl);
+ }));
+ r.innerHTML='<p><strong>عدد إثباتات الساعات:</strong> '+evidence.length+'</p><p class="field-help">عرض الملفات متاح لرئيس القسم والإدارة المخولة فقط.</p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات المطلوبة</th><th>الإثبات</th><th>الحالة</th><th>الملاحظة</th><th>القرار</th></tr></thead><tbody>'+evidence.map(x=>{
   const p=profiles.get(x.student_user_id)||{};
-  const pending=x.review_status==='pending';
-  return '<tr><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+esc(x.review_status||'—')+'</td><td>'+esc(x.review_note||x.exception_reason||'—')+'</td><td>'+(pending?'<button class="btn" data-review="'+x.id+'" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="'+x.id+'" data-status="rejected">رفض</button> <button class="btn gold" data-review="'+x.id+'" data-status="exception_approved">استثناء مسبب</button>':'تمت المراجعة')+'</td></tr>';
+  const pending=x.review_status==='pending',fileUrl=fileLinks.get(x.id);
+  const fileCell=fileUrl?'<a href="'+esc(fileUrl)+'" target="_blank" rel="noopener">فتح / تنزيل الإثبات</a>':'تعذر إنشاء رابط الملف';
+  return '<tr><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+fileCell+'</td><td>'+esc(x.review_status||'—')+'</td><td>'+esc(x.review_note||x.exception_reason||'—')+'</td><td>'+(pending?'<button class="btn" data-review="'+x.id+'" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="'+x.id+'" data-status="rejected">رفض</button> <button class="btn gold" data-review="'+x.id+'" data-status="exception_approved">استثناء مسبب</button>':'تمت المراجعة')+'</td></tr>';
  }).join('')+'</tbody></table></div>';
  r.querySelectorAll('[data-review]').forEach(b=>b.onclick=async()=>{
   const status=b.dataset.status;
