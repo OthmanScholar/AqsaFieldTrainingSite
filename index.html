@@ -62,6 +62,21 @@ body.supervisor-mode .home-hub{display:none!important}
 .home-hub .hub-options .card .btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
 @media(max-width:900px){.home-hub .hub-options{grid-template-columns:repeat(2,minmax(0,1fr))}.home-hub .hub-options .card:nth-child(2){border-inline-end:0}}
 @media(max-width:600px){.home-hub{padding:18px 14px;border-radius:18px}.home-hub .team-profiles{grid-template-columns:1fr;gap:4px}.home-hub .team-profile{padding:10px 4px}.home-hub .team-profile img{width:82px;height:82px}.home-hub .hub-options{grid-template-columns:1fr;padding-top:8px}.home-hub .hub-options .card{padding:18px 8px;border-inline-end:0!important;border-bottom:1px solid #ffffff35}.home-hub .hub-options .card:last-child{border-bottom:0}}
+
+/* Role-specific supervisor workspace within the main site */
+.login-shortcuts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.login-shortcuts .btn{white-space:nowrap}
+body.supervisor-mode .topbar{min-height:58px;justify-content:center;padding:9px 18px}
+body.supervisor-mode .topbar .brand,body.supervisor-mode .topbar .nav,body.supervisor-mode .topbar .topright{display:none!important}
+body.supervisor-mode .topbar:after{content:"بوابة المشرف | نظام إدارة التدريب الميداني";font-weight:900;color:#fff;font-size:1.05rem}
+body.supervisor-mode #home>.hero,body.supervisor-mode #home>.home-hub{display:none!important}
+body.supervisor-mode #home>.wrap>section:not(#portalPanel),body.supervisor-mode #home>.wrap>div>section:not(#portalPanel){display:none!important}
+body.supervisor-mode #portalPanel{display:block!important;max-width:1100px;margin:20px auto;padding:clamp(14px,2vw,24px);background:transparent;border:0;box-shadow:none}
+body.supervisor-mode #portalPanel>h2{display:none}
+body.supervisor-mode #portalPanel .supervisor-dashboard{max-width:100%}
+body.supervisor-mode #portalPanel .supervisor-toolbar{margin-bottom:18px}
+body.supervisor-mode #portalPanel .supervisor-work-card{min-height:200px}
+@media(max-width:650px){.login-shortcuts{gap:5px}.login-shortcuts .btn{padding:8px 10px;font-size:.8rem}}
 </style>
 </head>
 <body>
@@ -70,7 +85,7 @@ body.supervisor-mode .home-hub{display:none!important}
   <nav class="nav">
     <button data-go="home">الرئيسية</button><button data-go="supervisors">المشرفون</button><button data-go="documents">نماذج الطلاب</button><button data-go="contact">تواصل معنا</button>
   </nav>
-  <div class="topright"><button id="headLogin" class="btn gold" type="button" onclick="document.getElementById('authPanel').classList.remove('hidden');document.getElementById('entitiesPanel').classList.add('hidden');document.getElementById('supervisorsPanel').classList.add('hidden');document.getElementById('documentsPanel').classList.add('hidden');document.getElementById('portalPanel').classList.add('hidden');document.getElementById('contactPanel').classList.add('hidden');document.getElementById('loginView').classList.remove('hidden');document.getElementById('signupView').classList.add('hidden');document.getElementById('resetView').classList.add('hidden');document.getElementById('authPanel').scrollIntoView({behavior:'smooth',block:'start'})">دخول رئيس القسم</button></div>
+  <div class="topright login-shortcuts"><button id="supervisorLogin" class="btn" type="button">دخول المشرف</button><button id="headLogin" class="btn gold" type="button">دخول رئيس القسم</button><button id="studentLogin" class="btn" type="button">دخول الطلبة</button></div>
 </header>
 <main id="home">
 <section class="hero">
@@ -221,6 +236,8 @@ function go(where){hidePanels();if(where==='home'){window.scrollTo({top:0,behavi
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelectorAll('[data-open="auth"]').forEach(b=>b.addEventListener('click',()=>{authLoginMode='general';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل الدخول';$('loginIdentifierLabel').textContent='الرقم الجامعي للطالب أو البريد الوظيفي للموظف';$('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth')}));
 $('headLogin').addEventListener('click',()=>{authLoginMode='department_head';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول رئيس القسم';$('loginIdentifierLabel').textContent='البريد الوظيفي لرئيس القسم';$('loginIdentifier').placeholder='البريد الوظيفي لرئيس القسم';go('auth');$('loginIdentifier').focus({preventScroll:true})});
+$('supervisorLogin').addEventListener('click',()=>{authLoginMode='supervisor';$('showSupervisorSignupBtn').classList.remove('hidden');$('showSignupBtn').classList.add('hidden');$('showResetBtn').classList.add('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول المشرف';$('loginIdentifierLabel').textContent='رقم الهوية الوطنية للمشرف';$('loginIdentifier').placeholder='رقم الهوية الوطنية للمشرف';go('auth');$('loginIdentifier').focus({preventScroll:true})});
+$('studentLogin').addEventListener('click',()=>{authLoginMode='general';$('showSupervisorSignupBtn').classList.add('hidden');$('showSignupBtn').classList.remove('hidden');$('showResetBtn').classList.remove('hidden');toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل دخول الطالب';$('loginIdentifierLabel').textContent='الرقم الجامعي للطالب';$('loginIdentifier').placeholder='أدخل الرقم الجامعي';go('auth');$('loginIdentifier').focus({preventScroll:true})});
 if($('authToggle'))$('authToggle').addEventListener('click',()=>currentSession?signOut():go('auth'));
 async function loadSpecialties(){if(!sb){$('specialty').innerHTML='<option value="">تعذر تحميل الخدمة</option>';return}const {data,error}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');if(error){$('specialty').innerHTML='<option value="">تعذر تحميل التخصصات</option>';return}$('specialty').innerHTML='<option value="">اختر التخصص</option>'+(data||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
 let entityDirectoryRows=[];
