@@ -1220,7 +1220,23 @@ async function saveStudentPreference(e){
  showNotice('تم حفظ بيانات التدريب المقترحة في قاعدة البيانات. اختيار المشرف والجهة لا يصبح تكليفًا رسميًا إلا بعد اعتماد الإدارة.','success');
 }
 async function submitRequest(e){e.preventDefault();const entity=$('requestEntity').value;if(!entity){showNotice('اختر جهة تدريب أولًا.','error');return}const {data:p}=await sb.from('student_profiles').select('specialty_id,eligibility_status,completed_hours').eq('user_id',currentSession.user.id).maybeSingle();if(!p||!['approved','exception_approved'].includes(p.eligibility_status)||(p.eligibility_status==='approved'&&Number(p.completed_hours||0)<36)){showNotice('لا يمكن إرسال الطلب قبل اعتماد أهلية التدريب وإثبات الساعات المطلوبة.','error');return}const {error}=await sb.from('training_registration_requests').insert({student_user_id:currentSession.user.id,specialty_id:p.specialty_id,training_entity_id:Number(entity),request_status:'pending'});if(error){showNotice(error.message,'error');return}showNotice('تم إرسال الطلب بنجاح.','success');renderPortal()}
-async function submitEvidence(e){e.preventDefault();const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value);if(!file)return;const allowed=file.type==='application/pdf'||file.type.startsWith('image/');if(!allowed){showNotice('يُسمح برفع الصور أو ملفات PDF فقط.','error');return}if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}const path=`${currentSession.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:currentSession.user.id,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});if(error){showNotice('تم رفع الملف لكن تعذّر تسجيل طلب المراجعة: '+error.message,'error');return}showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal()}
+async function submitEvidence(e){
+ e.preventDefault();
+ const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value),uid=currentSession?.user?.id;
+ if(!uid||!file)return;
+ const {data:existing,error:checkError}=await sb.from('hour_evidence_reviews').select('id').eq('student_user_id',uid).eq('review_status','pending').limit(1);
+ if(checkError){showNotice('تعذر التحقق من وجود طلب سابق: '+checkError.message,'error');return}
+ if(existing?.length){showNotice('لديك إثبات ساعات قيد المراجعة بالفعل. لا يمكن إنشاء تسجيل مكرر. تابع حالة طلبك أو انتظر قرار القسم.','error');return}
+ const allowed=file.type==='application/pdf'||file.type.startsWith('image/');
+ if(!allowed){showNotice('يُسمح برفع الصور أو ملفات PDF فقط.','error');return}
+ if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}
+ const path=`${uid}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+ const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});
+ if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}
+ const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:uid,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});
+ if(error){showNotice(error.code==='23505'?'يوجد إثبات آخر قيد المراجعة لهذا الطالب بالفعل.':'تعذر تسجيل طلب المراجعة: '+error.message,'error');return}
+ showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal();
+}
 let currentSupervisorAssignedStudents=[];
 async function fetchSupervisorAssignedStudents(){
  if(currentRole!=='supervisor'||!currentSession?.user?.id)throw new Error('يجب تسجيل الدخول بحساب مشرف.');
@@ -1517,12 +1533,14 @@ async function loadSupervisorForms(){
 }
 async function loadEvidence(){
  const r=$('staffResults');
- r.innerHTML='<p>جارٍ تحميل إثباتات الساعات...</p>';
- const {data,error}=await sb.from('hour_evidence_reviews').select('id,student_user_id,storage_path,claimed_completed_hours,review_status,review_note,exception_reason,created_at').eq('review_status','pending').order('created_at',{ascending:false}).limit(200);
- if(error){r.textContent='تعذر تحميل الإثباتات: '+error.message;return}
- const evidence=data||[];
- if(!evidence.length){r.innerHTML='<p class="muted">لا توجد إثباتات ساعات مقدمة حتى الآن.</p>';return}
- const ids=[...new Set(evidence.map(x=>x.student_user_id).filter(Boolean))];
+ r.innerHTML='<p>جارٍ تحميل قائمة المراجعة وسجل الإرجاعات...</p>';
+ const [pendingResult,returnedResult]=await Promise.all([
+  sb.from('hour_evidence_reviews').select('id,student_user_id,storage_path,claimed_completed_hours,review_status,review_note,exception_reason,created_at').eq('review_status','pending').order('created_at',{ascending:false}).limit(200),
+  sb.from('hour_evidence_reviews').select('id,student_user_id,claimed_completed_hours,review_status,review_note,created_at').eq('review_status','returned').order('reviewed_at',{ascending:false}).limit(200)
+ ]);
+ if(pendingResult.error||returnedResult.error){r.innerHTML='<p class="notice show error">تعذر تحميل قوائم الإثباتات: '+esc((pendingResult.error||returnedResult.error).message)+'</p>';return}
+ const evidence=pendingResult.data||[],returned=returnedResult.data||[];
+ const ids=[...new Set([...evidence,...returned].map(x=>x.student_user_id).filter(Boolean))];
  const pr=ids.length?await sb.from('student_profiles').select('user_id,full_name,university_number').in('user_id',ids):{data:[],error:null};
  if(pr.error){r.textContent='تعذر تحميل أسماء الطلاب: '+pr.error.message;return}
  const profiles=new Map((pr.data||[]).map(p=>[p.user_id,p]));
@@ -1532,25 +1550,29 @@ async function loadEvidence(){
   const {data:signed,error:signedError}=await sb.storage.from('student-hour-evidence').createSignedUrl(x.storage_path,3600);
   if(!signedError&&signed?.signedUrl)fileLinks.set(x.id,signed.signedUrl);
  }));
- r.innerHTML='<p><strong>عدد إثباتات الساعات:</strong> '+evidence.length+'</p><p class="field-help">عرض الملفات متاح لرئيس القسم والإدارة المخولة فقط.</p><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات المطلوبة</th><th>الإثبات</th><th>الحالة</th><th>الملاحظة</th><th>القرار</th></tr></thead><tbody>'+evidence.map(x=>{
-  const p=profiles.get(x.student_user_id)||{};
-  const pending=x.review_status==='pending',fileUrl=fileLinks.get(x.id);
-  const fileCell=fileUrl?'<a href="'+esc(fileUrl)+'" target="_blank" rel="noopener">فتح / تنزيل الإثبات</a>':'تعذر إنشاء رابط الملف';
-  return '<tr><td>'+esc(p.full_name||'بيانات الاسم غير متاحة')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+fileCell+'</td><td>'+esc(x.review_status==='returned'?'مُعاد للطالب':x.review_status||'—')+'</td><td>'+esc(x.review_note||x.exception_reason||'—')+'</td><td>'+(pending?'<button class="btn" data-review="'+x.id+'" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="'+x.id+'" data-status="rejected">رفض</button> <button class="btn gold" data-review="'+x.id+'" data-status="exception_approved">استثناء مسبب</button> <button class="btn" style="background:#b7791f" data-review-return="'+x.id+'">إرجاع</button>': 'تمت المراجعة')+'</td></tr>';
- }).join('')+'</tbody></table></div>';
+ const pendingTable=evidence.length
+  ? '<div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات</th><th>الإثبات</th><th>القرار</th></tr></thead><tbody>'+evidence.map(x=>{
+    const p=profiles.get(x.student_user_id)||{},url=fileLinks.get(x.id);
+    return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">فتح / تنزيل الإثبات</a>':'تعذر إنشاء رابط الملف')+'</td><td><button class="btn" data-review="'+x.id+'" data-status="approved">اعتماد</button> <button class="btn ghost" data-review="'+x.id+'" data-status="rejected">رفض</button> <button class="btn gold" data-review="'+x.id+'" data-status="exception_approved">استثناء مسبب</button> <button class="btn" style="background:#b7791f" data-review-return="'+x.id+'">إرجاع</button></td></tr>';
+   }).join('')+'</tbody></table></div>'
+  : '<p class="muted">لا توجد إثباتات بانتظار المراجعة حاليًا.</p>';
+ const returnedTable=returned.length
+  ? '<div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>الساعات</th><th>سبب الإرجاع / الملاحظة</th><th>تاريخ الإرجاع</th></tr></thead><tbody>'+returned.map(x=>{
+    const p=profiles.get(x.student_user_id)||{};
+    return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(x.claimed_completed_hours)+'</td><td>'+esc(x.review_note||'—')+'</td><td>'+esc(x.created_at?new Date(x.created_at).toLocaleString('ar'):'—')+'</td></tr>';
+   }).join('')+'</tbody></table></div>'
+  : '<p class="muted">لا توجد حالات إرجاع مسجلة.</p>';
+ r.innerHTML='<div class="card"><h3>إثباتات الساعات — قائمة المراجعة</h3><p class="field-help">تظهر هنا الطلبات الجديدة فقط. بعد اعتمادها أو رفضها أو إرجاعها تنتقل من قائمة الانتظار إلى سجلها المناسب، مع الاحتفاظ بالتوثيق.</p><p><strong>بانتظار المراجعة: '+evidence.length+'</strong></p>'+pendingTable+'<details class="card" style="margin-top:16px"><summary style="cursor:pointer;font-weight:800">سجل الإرجاعات ('+returned.length+')</summary><p class="muted small">هذه قائمة متابعة فقط، ولا تعيد الحالات إلى قائمة المراجعة تلقائيًا.</p>'+returnedTable+'</details></div>';
  r.querySelectorAll('[data-review]').forEach(b=>b.onclick=async()=>{
-  const status=b.dataset.status;
-  let note=null,exceptionReason=null;
-  if(status==='rejected'){note=prompt('اكتب سبب رفض إثبات الساعات:');if(note===null)return;if(!note.trim()){showNotice('اكتب سبب الرفض قبل المتابعة.','error');return}}
-  if(status==='exception_approved'){exceptionReason=prompt('اكتب مبرر الاستثناء (إلزامي):');if(exceptionReason===null)return;if(!exceptionReason.trim()){showNotice('يجب توثيق مبرر الاستثناء.','error');return}}
+  const status=b.dataset.status;let note=null,exceptionReason=null;
+  if(status==='rejected'){note=prompt('اكتب سبب رفض إثبات الساعات (إلزامي):');if(note===null)return;if(note.trim().length<3){showNotice('اكتب سبب الرفض بوضوح.','error');return}}
+  if(status==='exception_approved'){exceptionReason=prompt('اكتب مبرر الاستثناء (إلزامي):');if(exceptionReason===null)return;if(exceptionReason.trim().length<3){showNotice('يجب توثيق مبرر الاستثناء.','error');return}}
   const label=status==='approved'?'اعتماد الإثبات':status==='rejected'?'رفض الإثبات':'اعتماد الاستثناء المسبب';
   if(!confirm('تأكيد '+label+'؟'))return;
   b.disabled=true;
-  const {error:decisionError}=await sb.rpc('review_hour_evidence',{
-   p_evidence_id:Number(b.dataset.review),p_status:status,p_note:note,p_exception_reason:exceptionReason
-  });
+  const {error:decisionError}=await sb.rpc('review_hour_evidence',{p_evidence_id:Number(b.dataset.review),p_status:status,p_note:note,p_exception_reason:exceptionReason});
   if(decisionError){showNotice('تعذر حفظ القرار: '+decisionError.message,'error');b.disabled=false;return}
-  showNotice(status==='exception_approved'?'تم تسجيل الاستثناء مع المبرر.':'تم حفظ قرار مراجعة الساعات.','success');
+  showNotice(status==='approved'?'تم الاعتماد ونقل الطالب إلى مسار المشرف إذا اكتملت شروط الإسناد.':status==='exception_approved'?'تم اعتماد الاستثناء ونقل الطالب إلى مسار المشرف إذا اكتملت شروط الإسناد.':'تم الرفض وإبلاغ الطالب.','success');
   await loadEvidence();
  });
  r.querySelectorAll('[data-review-return]').forEach(b=>b.onclick=async()=>{
@@ -1559,12 +1581,9 @@ async function loadEvidence(){
   if(reason.trim().length<3){showNotice('اكتب سبب الإرجاع بوضوح (3 أحرف على الأقل).','error');return}
   if(!confirm('إرسال سبب الإرجاع للطالب في إشعاراته؟'))return;
   b.disabled=true;
-  const {error:returnError}=await sb.rpc('return_student_item',{
-   p_kind:'hour_evidence',p_student_user_id:null,p_request_id:null,
-   p_reason:reason.trim(),p_evidence_id:Number(b.dataset.reviewReturn)
-  });
+  const {error:returnError}=await sb.rpc('return_student_item',{p_kind:'hour_evidence',p_student_user_id:null,p_request_id:null,p_reason:reason.trim(),p_evidence_id:Number(b.dataset.reviewReturn)});
   if(returnError){showNotice('تعذر إرجاع إثبات الساعات: '+returnError.message,'error');b.disabled=false;return}
-  showNotice('تم إرجاع إثبات الساعات وإرسال إشعار للطالب.','success');
+  showNotice('تم إرجاع الإثبات وإرسال إشعار للطالب.','success');
   await loadEvidence();
  });
 }
