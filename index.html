@@ -134,6 +134,14 @@ body.supervisor-mode .home-hub{display:none!important}
 @media(max-width:760px){.home-hub .team-profiles{grid-template-columns:1fr;width:min(520px,100%);gap:12px}.home-hub .team-profile{min-height:122px;padding:14px 17px}.home-hub .team-profile img{width:82px;height:82px;flex-basis:82px}}
 @media(max-width:600px){.home-hub .team-profile{justify-content:flex-start;gap:13px}.home-hub .team-profile h3{font-size:1rem}.home-hub .team-profile p{font-size:.86rem}}
 
+
+.profile-contact{display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;margin-top:8px!important}
+.profile-contact .contact-action{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;background:#f1f5fa;border:1px solid #dbe5ef;color:#245b91!important;font-weight:800;font-size:.88rem;text-decoration:none;direction:rtl;transition:background .2s ease,transform .2s ease}
+.profile-contact .contact-action:hover{background:#e4edf7;transform:translateY(-1px)}
+.profile-contact .contact-action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 17px}
+.profile-contact .whatsapp-action{color:#16845a!important;background:#eaf6ef;border-color:#cfe8d8}
+.profile-contact .whatsapp-action:hover{background:#dff1e6}
+
 </style>
 </head>
 <body>
@@ -151,8 +159,8 @@ body.supervisor-mode .home-hub{display:none!important}
 <section class="wrap home-hub">
  <h2 class="hub-heading">إشراف ومتابعة التدريب الميداني</h2>
  <div class="team-profiles">
-  <article class="team-profile"><img src="dr-othman.jpg.jpg" alt="د. عثمان محمد العثماني" loading="lazy"><div><h3>د. عثمان محمد العثماني</h3><p>مساعد رئيس قسم التدريب الميداني — العلوم التربوية</p><p><a href="tel:0598983625">0598983625</a></p></div></article>
-  <article class="team-profile"><img src="dr-alaa.jpg.jpeg" alt="د. علاء عيد" loading="lazy"><div><h3>د. علاء عيد</h3><p>رئيس قسم التدريب الميداني</p><p><a href="tel:0593418641">0593418641</a></p></div></article>
+  <article class="team-profile"><img src="dr-othman.jpg.jpg" alt="د. عثمان محمد العثماني" loading="lazy"><div><h3>د. عثمان محمد العثماني</h3><p>مساعد رئيس قسم التدريب الميداني — العلوم التربوية</p><p class="profile-contact"><a class="contact-action phone-action" href="tel:0598983625" aria-label="اتصال هاتفي بالمساعد"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5 9.1 3l2 4.7-2 1.6a15 15 0 0 0 5.6 5.6l1.6-2 4.7 2-.5 2.5a2 2 0 0 1-2.2 1.6A16.5 16.5 0 0 1 5 5.7a2 2 0 0 1 1.6-2.2Z"/></svg><span>0598983625</span></a><a class="contact-action whatsapp-action" href="https://wa.me/970598983625" target="_blank" rel="noopener" aria-label="واتساب المساعد"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.7a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.7Z"/><path d="M9 8.5c.5 2.6 2 4.1 4.6 5l1.2-1.2 2 .9c-.2 1.2-1.1 2-2.3 2-3.7-.4-6.7-3.4-7.1-7.1 0-1.2.8-2.1 2-2.3l.9 2L9 8.5Z"/></svg><span>واتساب</span></a></p></div></article>
+  <article class="team-profile"><img src="dr-alaa.jpg.jpeg" alt="د. علاء عيد" loading="lazy"><div><h3>د. علاء عيد</h3><p>رئيس قسم التدريب الميداني</p><p class="profile-contact"><a class="contact-action phone-action" href="tel:0594619461" aria-label="اتصال هاتفي برئيس القسم"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5 9.1 3l2 4.7-2 1.6a15 15 0 0 0 5.6 5.6l1.6-2 4.7 2-.5 2.5a2 2 0 0 1-2.2 1.6A16.5 16.5 0 0 1 5 5.7a2 2 0 0 1 1.6-2.2Z"/></svg><span>0594619461</span></a><a class="contact-action whatsapp-action" href="https://wa.me/970594619461" target="_blank" rel="noopener" aria-label="واتساب رئيس القسم"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.7a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.7Z"/><path d="M9 8.5c.5 2.6 2 4.1 4.6 5l1.2-1.2 2 .9c-.2 1.2-1.1 2-2.3 2-3.7-.4-6.7-3.4-7.1-7.1 0-1.2.8-2.1 2-2.3l.9 2L9 8.5Z"/></svg><span>واتساب</span></a></p></div></article>
  </div>
  <div class="cards hub-options">
   <article class="card"><div class="emoji" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 6h13M8 8h8M8 12h8M8 16h5"/></svg></div><h3>تسجيل الطالب</h3><p>إنشاء حساب طالب وإرسال طلب التدريب وإثبات الساعات.</p><button class="btn" data-open="auth">بدء التسجيل</button></article>
