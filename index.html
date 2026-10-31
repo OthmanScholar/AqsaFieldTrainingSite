@@ -1276,32 +1276,23 @@ async function submitEvidence(e){
 let currentSupervisorAssignedStudents=[];
 async function fetchSupervisorAssignedStudents(){
  if(currentRole!=='supervisor'||!currentSession?.user?.id)throw new Error('يجب تسجيل الدخول بحساب مشرف.');
- const {data:assignments,error:assignmentError}=await sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,training_entity_id').eq('supervisor_user_id',currentSession.user.id).limit(1000);
- if(assignmentError)throw assignmentError;
- const rows=assignments||[];
- const studentIds=[...new Set(rows.map(x=>x.student_user_id).filter(Boolean))];
- const [profilesResult,requestsResult,preferencesResult]=await Promise.all([
-  studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,phone,student_area,created_at,registration_status').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
-  studentIds.length?sb.from('training_registration_requests').select('student_user_id,training_entity_id,request_status,created_at').in('student_user_id',studentIds).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null}),
-  studentIds.length?sb.from('student_training_preferences').select('student_user_id,preferred_training_entity_id,proposed_entity_name,proposed_entity_location,training_type,student_area').in('student_user_id',studentIds):Promise.resolve({data:[],error:null})
- ]);
- if(profilesResult.error||requestsResult.error||preferencesResult.error)throw (profilesResult.error||requestsResult.error||preferencesResult.error);
- const profiles=new Map((profilesResult.data||[]).map(x=>[x.user_id,x]));
- const requestMap=new Map();
- (requestsResult.data||[]).forEach(x=>{if(!requestMap.has(x.student_user_id)||(['approved','exception_approved'].includes(x.request_status)&&!['approved','exception_approved'].includes(requestMap.get(x.student_user_id).request_status)))requestMap.set(x.student_user_id,x)});
- const preferenceMap=new Map((preferencesResult.data||[]).map(x=>[x.student_user_id,x]));
- const entityIds=[...new Set([...rows.map(x=>x.training_entity_id),...(requestsResult.data||[]).filter(x=>['approved','exception_approved'].includes(x.request_status)).map(x=>x.training_entity_id),...(preferencesResult.data||[]).map(x=>x.preferred_training_entity_id)].filter(x=>x!==null&&x!==undefined))];
- const entitiesResult=entityIds.length?await sb.from('training_entities').select('id,name,entity_type,governorate,address').in('id',entityIds):{data:[],error:null};
- if(entitiesResult.error)throw entitiesResult.error;
- const entities=new Map((entitiesResult.data||[]).map(x=>[String(x.id),x]));
- currentSupervisorAssignedStudents=rows.map(a=>{
-  const p=profiles.get(a.student_user_id)||{},request=requestMap.get(a.student_user_id)||{},pref=preferenceMap.get(a.student_user_id)||{};
-  const entityId=pref.preferred_training_entity_id||(['approved','exception_approved'].includes(request.request_status)?request.training_entity_id:null)||a.training_entity_id;
-  const entity=entities.get(String(entityId))||{};
-  const proposedName=pref.proposed_entity_name||'';
-  const proposedLocation=pref.proposed_entity_location||'';
-  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entity.name||'—',training_entity_name:proposedName||'—',training_entity_type:entity.name||'—',training_address:proposedLocation||'—',training_governorate:pref.student_area||p.student_area||'—',student_area:p.student_area||pref.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
- });
+ const {data,error}=await sb.rpc('get_supervisor_assigned_student_details');
+ if(error)throw error;
+ currentSupervisorAssignedStudents=(data||[]).map(x=>({
+  user_id:x.student_user_id,
+  full_name:x.full_name||'—',
+  university_number:x.university_number||'—',
+  phone:x.phone||'—',
+  training_place:x.approved_training_entity||'—',
+  training_entity_type:x.approved_training_entity||'—',
+  training_entity_name:x.proposed_institution_name||'—',
+  training_address:x.institution_location||'—',
+  training_governorate:'',
+  student_area:x.student_area||'—',
+  joined_at:x.joined_at||null,
+  registration_status:x.registration_status||'pending',
+  assignment_id:x.assignment_id
+ }));
  return currentSupervisorAssignedStudents;
 }
 function supervisorApprovalLabel(status){
