@@ -12,6 +12,20 @@
 <style>
 :root{--wine:#245b91;--dark:#12365d;--gold:#d8b46a;--gold2:#b18a42;--ivory:#f6f9fd;--ink:#1e293b;--muted:#64748b;--line:#dbe5f0;--shadow:0 16px 38px #12365d20}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--ivory);color:var(--ink);font-family:Cairo,Tahoma,Arial,sans-serif}button,input,select,textarea{font:inherit}button,a{cursor:pointer}a{text-decoration:none;color:inherit}.topbar{background:linear-gradient(100deg,var(--dark),var(--wine),#3478b8);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px clamp(16px,4vw,60px);gap:18px;flex-wrap:wrap}
+
+/* Compact, distinct authentication panel */
+#authPanel{width:min(680px,calc(100% - 28px));margin:30px auto;padding:24px 26px;background:linear-gradient(145deg,#eef5ff 0%,#f8fbff 100%);border:1px solid #c9d9ee;border-top:5px solid #d8b46a;border-radius:20px;box-shadow:0 14px 34px #12365d18}
+#authPanel>h2{font-size:1.45rem;margin:0 0 8px;color:#174574}
+#authPanel>p{line-height:1.75;margin:0 0 14px}
+#authPanel .auth-tabs{gap:7px;margin:12px 0 18px}
+#authPanel .auth-tabs .btn{min-width:0;flex:1 1 145px;padding:9px 12px;border-radius:10px;font-size:.92rem}
+#authPanel .auth-view{background:#fff;border:1px solid #dce6f2;border-radius:14px;padding:17px 18px}
+#authPanel .auth-view h3{margin:0 0 12px;color:#173f66;font-size:1.12rem}
+#authPanel .field{margin:8px 0}
+#authPanel .field input,#authPanel .field select{min-height:43px;background:#f8fbff;border-color:#d4dfed}
+#authPanel form>.btn{min-width:100px;margin-top:7px}
+@media(max-width:600px){#authPanel{width:calc(100% - 22px);padding:17px 14px;margin:18px auto}#authPanel .auth-view{padding:14px 12px}#authPanel .auth-tabs .btn{flex-basis:100%}}
+
 /* Homepage visual refresh */
 .topbar{min-height:78px;padding:14px clamp(18px,5vw,76px);box-shadow:0 8px 24px #102f501c}
 .brand{font-size:1.02rem;letter-spacing:.1px}
