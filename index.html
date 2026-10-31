@@ -916,7 +916,41 @@ async function loadSupervisorReport(){
   return {name:p.name||profile.full_name||'اسم غير مسجل',count:g.students.size,specialty:[...g.specialties].join('، ')||p.specialty||profile.specialty||'غير محدد',degree:p.academic_degree||'غير مسجلة',nationalId:p.national_id||'غير مسجل',phone:p.phone||profile.phone||'غير مسجل'};
  }).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
  out.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h4>تقرير المشرفين</h4><button class="btn" type="button" id="printSupervisorReport">طباعة / حفظ PDF</button></div><p class="muted">الفترة: '+esc(start)+' إلى '+esc(end)+' — عدد المشرفين: '+report.length+' — إجمالي الطلبة: '+report.reduce((n,x)=>n+x.count,0)+'</p><div class="tablewrap"><table id="supervisorReportTable"><thead><tr><th>اسم المشرف</th><th>عدد الطلاب</th><th>القسم المختص</th><th>الدرجة العلمية</th><th>رقم الهوية</th><th>رقم الجوال</th></tr></thead><tbody>'+report.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.count+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.degree)+'</td><td>'+esc(x.nationalId)+'</td><td>'+esc(x.phone)+'</td></tr>').join('')+'</tbody></table></div></div>';
- $('printSupervisorReport').onclick=()=>{const w=window.open('','_blank');if(!w){showNotice('اسمح بالنوافذ المنبثقة لطباعة التقرير.','error');return}w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير المشرفين</title><style>body{font-family:Arial,sans-serif;padding:24px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #777;padding:9px;text-align:right}th{background:#eee}</style></head><body><h2>تقرير المشرفين</h2><p>الفترة: '+start+' إلى '+end+'</p>'+document.getElementById('supervisorReportTable').outerHTML+'</body></html>');w.document.close();w.focus();w.print()};
+ $('printSupervisorReport').onclick=()=>{const w=window.open('','_blank');if(!w){showNotice('اسمح بالنوافذ المنبثقة لطباعة التقرير.','error');return}w.document.write('<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير المشرفين</title><style>body{font-family:Arial,sans-serif;padding:24px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #777;padding:9px;text-align:right}th{background:#eee}</style></head><body><h2>تقرير المشرفين</h2><p>الفترة: '+start+' إلى '+end+'</p>'+document.getElementById('supervisorReportTable').outerHTML+'<script>
+/* Resilient homepage navigation: capture clicks before legacy button handlers. */
+document.addEventListener('click',function(event){
+ const el=event.target.closest('#headLogin,#supervisorLogin,#studentLogin,[data-go],[data-open="auth"]');
+ if(!el)return;
+ event.preventDefault();
+ event.stopImmediatePropagation();
+ const id=el.id;
+ if(id==='headLogin'||id==='supervisorLogin'||id==='studentLogin'){
+  authLoginMode=id==='headLogin'?'department_head':id==='supervisorLogin'?'supervisor':'general';
+  const supervisor=authLoginMode==='supervisor',student=authLoginMode==='general';
+  $('showSupervisorSignupBtn')?.classList.toggle('hidden',!supervisor);
+  $('showSignupBtn')?.classList.toggle('hidden',supervisor);
+  $('showResetBtn')?.classList.toggle('hidden',!student);
+  if(student&&$('authPanel')){
+   $('authPanel').querySelector('h2').textContent='بوابة الطلبة';
+   $('authPanel').querySelector(':scope > p').textContent='اختر تسجيل الدخول إلى حسابك أو تسجيل طالب جديد. التسجيل متاح للطلبة المدرجين في كشف القسم المعتمد فقط.';
+   $('showLoginBtn').textContent='تسجيل دخول';$('showSignupBtn').textContent='تسجيل طالب جديد';$('showResetBtn').textContent='استرجاع كلمة المرور';
+  }
+  toggleAuthView('login');
+  $('loginView').querySelector('h3').textContent=id==='headLogin'?'تسجيل دخول رئيس القسم':supervisor?'تسجيل دخول المشرف':'تسجيل دخول الطالب';
+  $('loginIdentifierLabel').textContent=id==='headLogin'?'البريد الوظيفي لرئيس القسم':supervisor?'رقم الهوية الوطنية للمشرف':'الرقم الجامعي للطالب';
+  $('loginIdentifier').placeholder=id==='headLogin'?'البريد الوظيفي لرئيس القسم':supervisor?'رقم الهوية الوطنية للمشرف':'أدخل الرقم الجامعي';
+  go('auth');$('loginIdentifier').focus({preventScroll:true});return;
+ }
+ if(el.hasAttribute('data-open')){
+  authLoginMode='general';$('showSupervisorSignupBtn')?.classList.add('hidden');$('showSignupBtn')?.classList.remove('hidden');
+  toggleAuthView('login');$('loginView').querySelector('h3').textContent='تسجيل الدخول';
+  $('loginIdentifierLabel').textContent='الرقم الجامعي للطالب أو البريد الوظيفي للموظف';
+  $('loginIdentifier').placeholder='الرقم الجامعي أو البريد الوظيفي';go('auth');return;
+ }
+ if(el.hasAttribute('data-go'))go(el.dataset.go);
+},true);
+</script>
+</body></html>');w.document.close();w.focus();w.print()};
 }
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
 const authMeta=currentSession.user.user_metadata||{};
