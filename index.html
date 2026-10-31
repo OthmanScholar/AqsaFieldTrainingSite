@@ -608,7 +608,7 @@ if(authMeta.must_change_password){
 }
 if(currentRole==='student'){const {data:p}=await sb.from('student_profiles').select('full_name,university_number,eligibility_status,completed_hours,specialty_id,student_area,supervisor_name,supervisor_phone,registration_status,registration_review_note').eq('user_id',currentSession.user.id).maybeSingle();currentStudentSpecialtyName='';if(p?.specialty_id){const {data:sp}=await sb.from('specialties').select('name').eq('id',p.specialty_id).maybeSingle();currentStudentSpecialtyName=sp?.name||'';}const {data:req}=await sb.from('training_registration_requests').select('id,request_status,department_note,created_at').eq('student_user_id',currentSession.user.id).order('created_at',{ascending:false});c.innerHTML=`<p>أهلًا ${esc(p?.full_name||currentSession.user.email)}</p><p>رقم الطالب: ${esc(p?.university_number||'—')} · الساعات المعتمدة: ${esc(p?.completed_hours??'قيد المراجعة')} · الأهلية: <span class="status">${esc(p?.eligibility_status||'pending')}</span></p><p>حالة التسجيل بالقسم: <span class="status">${esc(p?.registration_status==='approved'?'معتمد':p?.registration_status==='rejected'?'مرفوض':'قيد المراجعة')}</span>${p?.registration_review_note?' · ملاحظة القسم: '+esc(p.registration_review_note):''}</p><p>منطقة الطالب: <strong>${esc(p?.student_area||'لم تُحدد بعد')}</strong> · المشرف المختار عند التسجيل: <strong>${esc(p?.supervisor_name||'لم يُعتمد بعد')}</strong></p><h3>بيانات جهة التدريب</h3><p class="muted small">المشرف المعروض هو المشرف المكلف في ملف الطالب. بيانات المؤسسة في النموذج التالي تخص جهة التدريب، ولا تغيّر إسناد المشرف.</p><form id="preferenceForm"><div class="grid2"><div class="field"><label>منطقة التدريب</label><select id="studentArea" required><option value="">اختر المنطقة</option><option value="شمال غزة">شمال غزة</option><option value="غزة">غزة</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div><div class="field"><label>نوع التدريب</label><select id="prefTrainingType" required><option value="institution">تدريب داخل مؤسسة</option><option value="activity">تدريب قائم على الأنشطة</option></select></div><div class="field"><label>جهة تدريب معتمدة (إن وجدت)</label><select id="prefEntity"><option value="">اختر جهة أو اقترح جهة جديدة</option></select></div><div class="field"><label>اسم المؤسسة المقترحة</label><input id="prefEntityName" placeholder="إذا لم تكن موجودة في القائمة"></div><div class="field"><label>موقع المؤسسة / المنطقة</label><input id="prefEntityLocation" placeholder="المحافظة، المنطقة، العنوان"></div></div><button class="btn gold" type="submit">حفظ بيانات التدريب المقترحة</button></form><h3>طلب التدريب الرسمي</h3>${p?.registration_status==='approved'?'':'<p class="notice show">يجب أن يعتمد رئيس القسم تسجيلك أولًا، ثم يعتمد أهلية الساعات، قبل إرسال طلب التدريب الرسمي.</p>'}<form id="requestForm"><div class="field"><label>جهة التدريب المعتمدة</label><select id="requestEntity" ${p?.registration_status==='approved'?'':'disabled'}><option value="">اختر جهة معتمدة</option></select></div><button class="btn" type="submit" ${p?.registration_status==='approved'?'':'disabled'}>إرسال طلب التدريب الرسمي</button></form><h3>طلباتك</h3>${req?.length?'<div class="tablewrap"><table><thead><tr><th>رقم</th><th>الحالة</th><th>ملاحظة القسم</th></tr></thead><tbody>'+req.map(x=>`<tr><td>${x.id}</td><td>${esc(x.request_status)}</td><td>${esc(x.department_note||'—')}</td></tr>`).join('')+'</tbody></table></div>':'<p class="muted">لا توجد طلبات حتى الآن.</p>'}<h3>إثبات الساعات</h3><div class="field-help" style="background:#fff8e8;border-right:4px solid #d6b35c;padding:12px;border-radius:8px;line-height:1.9;margin:12px 0"><strong>كيف تعرف عدد ساعاتك؟</strong> ارجع إلى كشف الإرشاد الأكاديمي أو صفحة الإرشاد الطلابي، وخذ العدد المكتوب للساعات المجتازة/المنجزة. اكتب العدد نفسه هنا وارفع صورة واضحة للكشف (صورة أو PDF) تُظهر عدد الساعات، ويفضل أن تتضمن اسمك أو رقمك الجامعي. إذا كان العدد أقل من 36، أدخله كما هو؛ لا ترفع عددًا غير صحيح. سيُراجع رئيس القسم المستند قبل اعتماد الأهلية.</div><form id="evidenceForm"><div class="field"><label>عدد الساعات المنجزة حسب كشف الإرشاد</label><input type="number" id="claimedHours" min="0" required></div><div class="field"><label>صورة كشف الإرشاد/إثبات الساعات (صورة أو PDF)</label><input type="file" id="evidenceFile" accept="image/*,.pdf" required></div><button class="btn gold" type="submit">رفع الإثبات</button></form>`;
 await fillEntitySelect();await fillPreferenceOptions();await loadStudentPreference();if($('requestForm'))$('requestForm').onsubmit=submitRequest;$('evidenceForm').onsubmit=submitEvidence;$('preferenceForm').onsubmit=saveStudentPreference;
-}else if(['admin','department_head','supervisor'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons primary-tools"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadWorkload">الأعباء والزيارات</button>${currentRole==='supervisor'?'<button class="btn gold" id="openSupervisorForms">نماذج التقييم حسب التخصص</button>':''}</div>${currentRole==='admin'||currentRole==='department_head'?'<details class="admin-tools"><summary>إدارة الطلاب والطلبات</summary><div class="service-buttons"><button class="btn gold" id="loadStudentRegistrations">مراجعة تسجيل الطلاب</button><button class="btn" id="loadRegistrationRequests">مراجعة طلبات التدريب</button><button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button><button class="btn gold" id="rosterImportBtn">استيراد كشف الطلاب (Excel)</button><button class="btn" id="addSingleStudentBtn">إضافة طالب جديد للكشف</button><button class="btn" id="assignmentManagerBtn">إدارة توزيع الطلاب</button></div></details><details class="admin-tools"><summary>إدارة الحسابات</summary><div class="service-buttons"><button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button><button class="btn" id="manageSupervisorAccountsBtn">حالة حسابات المشرفين</button></div></details><details class="admin-tools"><summary>النماذج والإعدادات</summary><div class="service-buttons"><button class="btn gold" id="manageDocumentsBtn">رفع النماذج الرسمية</button></div></details>':''}<div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadWorkload').onclick=loadWorkloadReport;if($('openSupervisorForms'))$('openSupervisorForms').onclick=loadSupervisorForms;if($('loadEvidence'))$('loadEvidence').onclick=loadEvidence;if($('loadStudentRegistrations'))$('loadStudentRegistrations').onclick=loadStudentRegistrations;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;if($('loadRegistrationRequests'))$('loadRegistrationRequests').onclick=loadRegistrationRequests;if($('rosterImportBtn'))$('rosterImportBtn').onclick=renderRosterImporter;if($('addSingleStudentBtn'))$('addSingleStudentBtn').onclick=renderSingleStudentEntry;if($('assignmentManagerBtn'))$('assignmentManagerBtn').onclick=loadAssignmentManager;if($('manageDocumentsBtn'))$('manageDocumentsBtn').onclick=renderDocumentManager;if($('manageSupervisorAccountsBtn'))$('manageSupervisorAccountsBtn').onclick=renderSupervisorAccountManager;if(currentRole==='supervisor')loadAssigned();
+}else if(currentRole==='supervisor'){c.innerHTML=`<p>مرحبًا بك في بوابة المشرف. هذه الصفحة مخصصة لمتابعة طلبتك وزياراتهم فقط.</p><div class="service-buttons primary-tools"><button class="btn gold" id="supervisorVisitEntry">إدخال الزيارات</button><button class="btn" id="supervisorStudentNames">أسماء الطلبة</button><button class="btn" id="supervisorStudentSearch">استعلام عن طالب</button></div><div id="staffResults"></div>`;$('supervisorVisitEntry').onclick=loadSupervisorVisitEntry;$('supervisorStudentNames').onclick=loadAssigned;$('supervisorStudentSearch').onclick=loadSupervisorStudentSearch;loadAssigned();}else if(['admin','department_head'].includes(currentRole)){c.innerHTML=`<p>مرحبًا. صلاحيتك الحالية: <span class="status">${esc(currentRole)}</span></p><div class="service-buttons primary-tools"><button class="btn" id="loadAssigned">عرض الطلاب/التكليفات</button><button class="btn gold" id="loadWorkload">الأعباء والزيارات</button></div><details class="admin-tools"><summary>إدارة الطلاب والطلبات</summary><div class="service-buttons"><button class="btn gold" id="loadStudentRegistrations">مراجعة تسجيل الطلاب</button><button class="btn" id="loadRegistrationRequests">مراجعة طلبات التدريب</button><button class="btn ghost" id="loadEvidence">مراجعة إثباتات الساعات</button><button class="btn gold" id="rosterImportBtn">استيراد كشف الطلاب (Excel)</button><button class="btn" id="addSingleStudentBtn">إضافة طالب جديد للكشف</button><button class="btn" id="assignmentManagerBtn">إدارة توزيع الطلاب</button></div></details><details class="admin-tools"><summary>إدارة الحسابات</summary><div class="service-buttons"><button class="btn" id="loadPasswordResets">طلبات استرجاع كلمة المرور</button><button class="btn" id="manageSupervisorAccountsBtn">حالة حسابات المشرفين</button></div></details><details class="admin-tools"><summary>النماذج والإعدادات</summary><div class="service-buttons"><button class="btn gold" id="manageDocumentsBtn">رفع النماذج الرسمية</button></div></details><div id="staffResults"></div><p class="muted small">تعرض هذه البوابة الوظائف التي تسمح بها قاعدة البيانات. لا يمكن إنشاء حساب مشرف أو ترقية صلاحية من الواجهة العامة.</p>`;$('loadAssigned').onclick=loadAssigned;$('loadWorkload').onclick=loadWorkloadReport;if($('loadEvidence'))$('loadEvidence').onclick=loadEvidence;if($('loadStudentRegistrations'))$('loadStudentRegistrations').onclick=loadStudentRegistrations;if($('loadPasswordResets'))$('loadPasswordResets').onclick=loadPasswordResetRequests;if($('loadRegistrationRequests'))$('loadRegistrationRequests').onclick=loadRegistrationRequests;if($('rosterImportBtn'))$('rosterImportBtn').onclick=renderRosterImporter;if($('addSingleStudentBtn'))$('addSingleStudentBtn').onclick=renderSingleStudentEntry;if($('assignmentManagerBtn'))$('assignmentManagerBtn').onclick=loadAssignmentManager;if($('manageDocumentsBtn'))$('manageDocumentsBtn').onclick=renderDocumentManager;if($('manageSupervisorAccountsBtn'))$('manageSupervisorAccountsBtn').onclick=renderSupervisorAccountManager;
 }else{c.innerHTML=`<p>الحساب مسجل الدخول لكن لم يتم تفعيل دور وظيفي له. تواصل مع الإدارة لتعيين الدور الصحيح.</p>`}
 
 c.insertAdjacentHTML('beforeend', `
@@ -948,34 +948,79 @@ async function saveStudentPreference(e){
 }
 async function submitRequest(e){e.preventDefault();const entity=$('requestEntity').value;if(!entity){showNotice('اختر جهة تدريب أولًا.','error');return}const {data:p}=await sb.from('student_profiles').select('specialty_id,eligibility_status,completed_hours').eq('user_id',currentSession.user.id).maybeSingle();if(!p||!['approved','exception_approved'].includes(p.eligibility_status)||(p.eligibility_status==='approved'&&Number(p.completed_hours||0)<36)){showNotice('لا يمكن إرسال الطلب قبل اعتماد أهلية التدريب وإثبات الساعات المطلوبة.','error');return}const {error}=await sb.from('training_registration_requests').insert({student_user_id:currentSession.user.id,specialty_id:p.specialty_id,training_entity_id:Number(entity),request_status:'pending'});if(error){showNotice(error.message,'error');return}showNotice('تم إرسال الطلب بنجاح.','success');renderPortal()}
 async function submitEvidence(e){e.preventDefault();const file=$('evidenceFile').files[0],hours=Number($('claimedHours').value);if(!file)return;const allowed=file.type==='application/pdf'||file.type.startsWith('image/');if(!allowed){showNotice('يُسمح برفع الصور أو ملفات PDF فقط.','error');return}if(file.size>10*1024*1024){showNotice('حجم الملف الأقصى 10 ميغابايت.','error');return}const path=`${currentSession.user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error:upErr}=await sb.storage.from('student-hour-evidence').upload(path,file,{upsert:false});if(upErr){showNotice('تعذر رفع الملف: '+upErr.message,'error');return}const {error}=await sb.from('hour_evidence_reviews').insert({student_user_id:currentSession.user.id,storage_path:path,claimed_completed_hours:hours,review_status:'pending'});if(error){showNotice('تم رفع الملف لكن تعذّر تسجيل طلب المراجعة: '+error.message,'error');return}showNotice('تم رفع إثبات الساعات وإرساله للمراجعة.','success');renderPortal()}
+let currentSupervisorAssignedStudents=[];
+async function fetchSupervisorAssignedStudents(){
+ if(currentRole!=='supervisor'||!currentSession?.user?.id)throw new Error('يجب تسجيل الدخول بحساب مشرف.');
+ const {data:assignments,error:assignmentError}=await sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,training_entity_id').eq('supervisor_user_id',currentSession.user.id).limit(1000);
+ if(assignmentError)throw assignmentError;
+ const rows=assignments||[];
+ const studentIds=[...new Set(rows.map(x=>x.student_user_id).filter(Boolean))];
+ const entityIds=[...new Set(rows.map(x=>x.training_entity_id).filter(x=>x!==null&&x!==undefined))];
+ const [profilesResult,entitiesResult]=await Promise.all([
+  studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,phone,student_area,created_at,registration_status').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
+  entityIds.length?sb.from('training_entities').select('id,name').in('id',entityIds):Promise.resolve({data:[],error:null})
+ ]);
+ if(profilesResult.error||entitiesResult.error)throw (profilesResult.error||entitiesResult.error);
+ const profiles=new Map((profilesResult.data||[]).map(x=>[x.user_id,x]));
+ const entities=new Map((entitiesResult.data||[]).map(x=>[String(x.id),x.name]));
+ currentSupervisorAssignedStudents=rows.map(a=>{
+  const p=profiles.get(a.student_user_id)||{};
+  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entities.get(String(a.training_entity_id))||p.student_area||'—',student_area:p.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
+ });
+ return currentSupervisorAssignedStudents;
+}
+function supervisorApprovalLabel(status){
+ return status==='approved'?'موافق عليه من رئيس القسم':status==='rejected'?'مرفوض من رئيس القسم':'بانتظار موافقة رئيس القسم';
+}
+function supervisorDateLabel(value){
+ if(!value)return '—';
+ const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('ar');
+}
 async function loadSupervisorAssignedView(r){
-  r.innerHTML='<p>جارٍ تحميل بيانات الطلاب الذين اختاروك...</p>';
-  try{
-    // بيانات المشرف والطلاب والتفضيلات تُقرأ من دالة آمنة واحدة تتحقق من صلاحية المشرف.
-    const {data,error}=await sb.rpc('list_my_selected_students_details');
+ r.innerHTML='<p>جارٍ تحميل الطلبة المسندين إليك...</p>';
+ try{
+  const rows=await fetchSupervisorAssignedStudents();
+  r.innerHTML='<div class="card"><h3>أسماء الطلبة المسندين إليك</h3><p><strong>عدد الطلبة:</strong> '+rows.length+'</p>'+
+   (rows.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>مكان التدريب</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+
+    rows.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_place)+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td><span class="status">'+supervisorApprovalLabel(x.registration_status)+'</span></td></tr>').join('')+
+    '</tbody></table></div>':'<p class="muted">لا يوجد طلبة مسندون إلى حسابك حتى الآن.</p>')+'</div>';
+ }catch(err){r.innerHTML='<p class="notice show error">تعذر تحميل الطلبة المسندين: '+esc(err.message||'تحقق من صلاحية قراءة التكليفات.')+'</p>'}
+}
+async function loadSupervisorStudentSearch(){
+ const r=$('staffResults');
+ try{
+  const rows=currentSupervisorAssignedStudents.length?currentSupervisorAssignedStudents:await fetchSupervisorAssignedStudents();
+  r.innerHTML='<div class="card"><h3>استعلام عن طالب</h3><div class="field"><label for="supervisorStudentQuery">ابحث بالاسم أو الرقم الجامعي</label><input id="supervisorStudentQuery" type="search" placeholder="اكتب اسم الطالب أو رقمه الجامعي"></div><div id="supervisorStudentSearchResults"><p class="muted">ابدأ بكتابة الاسم أو الرقم الجامعي.</p></div></div>';
+  const input=$('supervisorStudentQuery'),out=$('supervisorStudentSearchResults');
+  input.oninput=()=>{
+   const q=normalizeArabicMatch(input.value);
+   if(!q){out.innerHTML='<p class="muted">ابدأ بكتابة الاسم أو الرقم الجامعي.</p>';return}
+   const found=rows.filter(x=>normalizeArabicMatch(x.full_name).includes(q)||normalizeArabicMatch(x.university_number).includes(q));
+   out.innerHTML=found.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>مكان التدريب</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+found.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_place)+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td>'+esc(supervisorApprovalLabel(x.registration_status))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">لا توجد نتيجة ضمن الطلبة المسندين إلى حسابك.</p>';
+  };
+ }catch(err){r.innerHTML='<p class="notice show error">تعذر تنفيذ الاستعلام: '+esc(err.message||'تعذر تحميل قائمة الطلبة.')+'</p>'}
+}
+async function loadSupervisorVisitEntry(){
+ const r=$('staffResults');
+ r.innerHTML='<p>جارٍ تحميل قائمة الطلبة المسندين إليك...</p>';
+ try{
+  const rows=currentSupervisorAssignedStudents.length?currentSupervisorAssignedStudents:await fetchSupervisorAssignedStudents();
+  if(!rows.length){r.innerHTML='<p class="notice show">لا يوجد طلبة مسندون إلى حسابك. لا يمكن تسجيل زيارة قبل اعتماد التكليف من رئيس القسم.</p>';return}
+  r.innerHTML='<div class="card"><h3>إدخال زيارة ميدانية</h3><p class="muted">سجّل زيارة واحدة للطالب في كل مرة. لا تظهر هنا إلا أسماء الطلبة المسندين إلى حسابك.</p><form id="supervisorVisitForm"><div class="field"><label for="visitStudent">اسم الطالب</label><select id="visitStudent" required><option value="">اختر الطالب</option>'+rows.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name+' — '+x.university_number)+'</option>').join('')+'</select></div><div class="grid2"><div class="field"><label for="visitSemester">الفصل الدراسي</label><input id="visitSemester" required maxlength="40" placeholder="مثال: 2026-1"></div><div class="field"><label for="visitNumber">رقم الزيارة</label><select id="visitNumber" required><option value="">اختر الزيارة</option><option value="1">الزيارة الأولى</option><option value="2">الزيارة الثانية</option><option value="3">الزيارة الثالثة</option><option value="4">الزيارة الرابعة</option></select></div><div class="field"><label for="visitDate">تاريخ الزيارة</label><input id="visitDate" type="date" required></div><div class="field"><label for="visitNotes">ملاحظات الزيارة (اختياري)</label><input id="visitNotes" maxlength="1000" placeholder="ملخص مختصر للزيارة"></div></div><button class="btn gold" type="submit">حفظ الزيارة</button></form></div>';
+  $('supervisorVisitForm').onsubmit=async e=>{
+   e.preventDefault();
+   const studentId=$('visitStudent').value,semester=$('visitSemester').value.trim(),visitNumber=Number($('visitNumber').value),visitDate=$('visitDate').value,notes=$('visitNotes').value.trim()||null;
+   if(!studentId||!semester||![1,2,3,4].includes(visitNumber)||!visitDate){showNotice('أكمل بيانات الزيارة المطلوبة.','error');return}
+   const button=e.submitter||$('supervisorVisitForm').querySelector('button[type="submit"]');button.disabled=true;button.textContent='جارٍ حفظ الزيارة...';
+   try{
+    const {error}=await sb.rpc('save_supervisor_training_visit',{p_student_user_id:studentId,p_semester_code:semester,p_visit_number:visitNumber,p_visit_date:visitDate,p_visit_type:'ميدانية',p_visit_notes:notes});
     if(error)throw error;
-
-    const rows=(data||[]).map(x=>({
-      name:x.full_name||'—',
-      number:x.university_number||'—',
-      phone:x.phone||'—',
-      specialty:x.specialty_name||'—',
-      area:x.training_area||'—',
-      place:x.training_entity_name||'—'
-    }));
-
-    r.innerHTML='<div class="card"><h3>طلابك في نظام التدريب</h3>'+
-      '<p class="muted">تعرض هذه الصفحة بيانات الطلاب الذين اختاروك عند التسجيل ومكان التدريب فقط. مراجعة التسجيل والأهلية وإثبات الساعات واعتماد التكليف من اختصاص رئيس القسم.</p>'+
-      '<p><strong>عدد الطلاب الذين اختاروك عند التسجيل: '+rows.length+'</strong></p>'+
-      (rows.length
-        ? '<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>التخصص</th><th>مكان التدريب / المنطقة</th><th>اسم جهة التدريب</th></tr></thead><tbody>'+
-          rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.area)+'</td><td>'+esc(x.place)+'</td></tr>').join('')+
-          '</tbody></table></div>'
-        : '<p class="muted">لا يوجد طلاب اختاروك عند التسجيل حتى الآن.</p>')+
-      '</div>';
-  }catch(err){
-    r.innerHTML='<p class="notice show error">تعذر تحميل بيانات الطلاب: '+esc(err.message||'تحقق من جلسة المشرف وصلاحية الدالة list_my_selected_students_details.')+'</p>';
-  }
+    showNotice('تم حفظ الزيارة بنجاح.','success');
+    $('supervisorVisitForm').reset();
+   }catch(err){showNotice('تعذر حفظ الزيارة: '+(err.message||'تحقق من صلاحية تسجيل الزيارات.') ,'error')}
+   finally{button.disabled=false;button.textContent='حفظ الزيارة'}
+  };
+ }catch(err){r.innerHTML='<p class="notice show error">تعذر تحميل بيانات الزيارة: '+esc(err.message||'راجع تكليفات المشرف.')+'</p>'}
 }
 async function loadAssigned(){
  const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل الطلاب والتكليفات...</p>';
