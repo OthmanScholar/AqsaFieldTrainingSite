@@ -794,7 +794,7 @@ async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSess
 
 async function logSupervisorActivity(action_type,description){
  if(currentRole!=='supervisor'||!currentSession?.user?.id)return;
- try{await sb.from('supervisor_activity_log').insert({supervisor_user_id:currentSession.user.id,action_type,description})}catch(err){console.warn('Supervisor activity log unavailable',err)}
+ try{await sb.from('supervisor_activity_log').insert({supervisor_user_id:currentSession.user.id,action_type,description});await recordAccountActivity(action_type,description)}catch(err){console.warn('Supervisor activity log unavailable',err)}
 }
 async function loadSupervisorDashboard(){
  const c=$('portalContent'),uid=currentSession.user.id,meta=currentSession.user.user_metadata||{};
