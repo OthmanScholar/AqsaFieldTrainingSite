@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#641e32">
 <title>نظام إدارة التدريب الميداني | كلية مجتمع الأقصى</title>
-<!-- Pages deploy marker: supervisor compact profile header v2 -->
+<!-- Pages deploy marker: hide homepage hub for supervisor v3 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -33,6 +33,7 @@
 
 
 /* Unified homepage hub: one continuous panel instead of separate cards */
+body.supervisor-mode .home-hub{display:none!important}
 .home-hub{background:linear-gradient(135deg,var(--wine),var(--dark));color:#fff;border:1px solid #d8b46a;border-radius:24px;padding:clamp(20px,3vw,36px);box-shadow:0 18px 44px #12365d2b;margin-top:28px;margin-bottom:30px}
 .home-hub .hub-heading{text-align:center;color:var(--gold);margin:0 0 10px;font-size:clamp(1.25rem,2.5vw,1.8rem)}
 .home-hub .team-profiles{margin:18px auto 24px;gap:18px}
@@ -599,7 +600,7 @@ $('passwordResetForm').addEventListener('submit',async e=>{
  finally{if(submit)submit.disabled=false}
 });
 async function signOut(){await sb.auth.signOut();await refreshSession();go('home');showNotice('تم تسجيل الخروج.','success')}
-async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSession();currentSession=data.session;currentRole=null;if(currentSession){const {data:r, error:roleError}=await sb.from('user_roles').select('role').eq('user_id',currentSession.user.id).maybeSingle();if(!roleError&&r?.role)currentRole=r.role;if($('sessionLabel'))$('sessionLabel').textContent=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.university_number||((currentSession.user.email||'').endsWith('@students.aqsa.invalid')?'طالب مسجل':currentSession.user.email)||'مستخدم';if($('authToggle'))$('authToggle').textContent='تسجيل الخروج'}else{if($('sessionLabel'))$('sessionLabel').textContent='';if($('authToggle'))$('authToggle').textContent=''}if(!$('portalPanel').classList.contains('hidden'))renderPortal()}
+async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSession();currentSession=data.session;currentRole=null;if(currentSession){const {data:r, error:roleError}=await sb.from('user_roles').select('role').eq('user_id',currentSession.user.id).maybeSingle();if(!roleError&&r?.role)currentRole=r.role;if($('sessionLabel'))$('sessionLabel').textContent=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.university_number||((currentSession.user.email||'').endsWith('@students.aqsa.invalid')?'طالب مسجل':currentSession.user.email)||'مستخدم';if($('authToggle'))$('authToggle').textContent='تسجيل الخروج'}else{if($('sessionLabel'))$('sessionLabel').textContent='';if($('authToggle'))$('authToggle').textContent=''}document.body.classList.toggle('supervisor-mode',currentRole==='supervisor');if(!$('portalPanel').classList.contains('hidden'))renderPortal()}
 async function renderPortal(){const c=$('portalContent');if(!currentSession){c.innerHTML='<p>سجّل الدخول لعرض الوظائف المتاحة لحسابك.</p><button class="btn" data-open="auth">دخول / تسجيل</button>';c.querySelector('button').onclick=()=>go('auth');return}
 const authMeta=currentSession.user.user_metadata||{};
 if(authMeta.must_change_password){
