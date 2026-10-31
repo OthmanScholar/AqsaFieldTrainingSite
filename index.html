@@ -873,7 +873,7 @@ async function loadAcademicSemestersManager(){
   showNotice('تم تفعيل الفصل الدراسي.','success');await loadAcademicSemestersManager();
  });
 }
-function openReportsPlaceholder(){
+async function openReportsPlaceholder(){
  const out=$('staffResults')||$('studentReportsArea');
  if(!out)return;
  out.innerHTML='<section class="card"><h3>📈 التقارير</h3><div class="card" style="background:#f7f9fc"><h4>تقرير المشرفين</h4><p class="muted">كشف بالمشرفين الذين لديهم طلبة مسندون خلال الفصل الدراسي المحدد.</p><div class="field"><label for="supervisorReportSemester">الفصل الدراسي</label><select id="supervisorReportSemester"><option value="">جارٍ تحميل الفصول الدراسية...</option></select></div><button class="btn gold" id="runSupervisorReport" type="button">عرض تقرير المشرفين</button></div><div id="supervisorReportResults"></div></section>';
