@@ -1247,14 +1247,15 @@ async function fetchSupervisorAssignedStudents(){
  const entityIds=[...new Set(rows.map(x=>x.training_entity_id).filter(x=>x!==null&&x!==undefined))];
  const [profilesResult,entitiesResult]=await Promise.all([
   studentIds.length?sb.from('student_profiles').select('user_id,full_name,university_number,phone,student_area,created_at,registration_status').in('user_id',studentIds):Promise.resolve({data:[],error:null}),
-  entityIds.length?sb.from('training_entities').select('id,name').in('id',entityIds):Promise.resolve({data:[],error:null})
+  entityIds.length?sb.from('training_entities').select('id,name,entity_type,governorate,address').in('id',entityIds):Promise.resolve({data:[],error:null})
  ]);
  if(profilesResult.error||entitiesResult.error)throw (profilesResult.error||entitiesResult.error);
  const profiles=new Map((profilesResult.data||[]).map(x=>[x.user_id,x]));
- const entities=new Map((entitiesResult.data||[]).map(x=>[String(x.id),x.name]));
+ const entities=new Map((entitiesResult.data||[]).map(x=>[String(x.id),x]));
  currentSupervisorAssignedStudents=rows.map(a=>{
   const p=profiles.get(a.student_user_id)||{};
-  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entities.get(String(a.training_entity_id))||p.student_area||'—',student_area:p.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
+  const entity=entities.get(String(a.training_entity_id))||{};
+  return {user_id:a.student_user_id,full_name:p.full_name||'—',university_number:p.university_number||'—',phone:p.phone||'—',training_place:entity.name||p.student_area||'—',training_entity_name:entity.name||'—',training_entity_type:entity.entity_type||'—',training_address:entity.address||'—',training_governorate:entity.governorate||'—',student_area:p.student_area||'—',joined_at:p.created_at||null,registration_status:p.registration_status||'pending',assignment_id:a.id};
  });
  return currentSupervisorAssignedStudents;
 }
@@ -1270,8 +1271,8 @@ async function loadSupervisorAssignedView(r){
  try{
   const rows=await fetchSupervisorAssignedStudents();
   r.innerHTML='<div class="card"><h3>أسماء الطلبة المسندين إليك</h3><p><strong>عدد الطلبة:</strong> '+rows.length+'</p>'+
-   (rows.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>مكان التدريب</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+
-    rows.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_place)+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td><span class="status">'+supervisorApprovalLabel(x.registration_status)+'</span></td></tr>').join('')+
+   (rows.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>جهة التدريب</th><th>اسم المؤسسة</th><th>العنوان</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+
+    rows.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_entity_type)+'</td><td>'+esc(x.training_entity_name)+'</td><td>'+esc([x.training_address,x.training_governorate].filter(v=>v&&v!=='—').join('، ')||'—')+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td><span class="status">'+supervisorApprovalLabel(x.registration_status)+'</span></td></tr>').join('')+
     '</tbody></table></div>':'<p class="muted">لا يوجد طلبة مسندون إلى حسابك حتى الآن.</p>')+'</div>';
  }catch(err){r.innerHTML='<p class="notice show error">تعذر تحميل الطلبة المسندين: '+esc(err.message||'تحقق من صلاحية قراءة التكليفات.')+'</p>'}
 }
@@ -1285,7 +1286,7 @@ async function loadSupervisorStudentSearch(){
    const q=normalizeArabicMatch(input.value);
    if(!q){out.innerHTML='<p class="muted">ابدأ بكتابة الاسم أو الرقم الجامعي.</p>';return}
    const found=rows.filter(x=>normalizeArabicMatch(x.full_name).includes(q)||normalizeArabicMatch(x.university_number).includes(q));
-   out.innerHTML=found.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>مكان التدريب</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+found.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_place)+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td>'+esc(supervisorApprovalLabel(x.registration_status))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">لا توجد نتيجة ضمن الطلبة المسندين إلى حسابك.</p>';
+   out.innerHTML=found.length?'<div class="tablewrap"><table><thead><tr><th>الاسم الرباعي</th><th>الرقم الجامعي</th><th>رقم الجوال</th><th>جهة التدريب</th><th>اسم المؤسسة</th><th>العنوان</th><th>تاريخ الانضمام</th><th>موافقة رئيس القسم</th></tr></thead><tbody>'+found.map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.university_number)+'</td><td>'+esc(x.phone)+'</td><td>'+esc(x.training_entity_type)+'</td><td>'+esc(x.training_entity_name)+'</td><td>'+esc([x.training_address,x.training_governorate].filter(v=>v&&v!=='—').join('، ')||'—')+'</td><td>'+supervisorDateLabel(x.joined_at)+'</td><td>'+esc(supervisorApprovalLabel(x.registration_status))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">لا توجد نتيجة ضمن الطلبة المسندين إلى حسابك.</p>';
   };
  }catch(err){r.innerHTML='<p class="notice show error">تعذر تنفيذ الاستعلام: '+esc(err.message||'تعذر تحميل قائمة الطلبة.')+'</p>'}
 }
