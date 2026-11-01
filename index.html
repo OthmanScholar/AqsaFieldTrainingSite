@@ -675,7 +675,7 @@ $('universityNumber').addEventListener('input',clearRosterVerification);
 $('verifyStudentNumberBtn').addEventListener('click',async()=>{
  const number=$('universityNumber').value.trim();
  const button=$('verifyStudentNumberBtn'), message=$('rosterLookupMessage');
- if(!/^(122|222)\\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 أو 222.';message.className='field-help error';return}
+ if(!/^(122|222)\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 أو 222.';message.className='field-help error';return}
  button.disabled=true;button.textContent='جارٍ التحقق...';message.textContent='جارٍ البحث في كشف الطلبة المعتمد...';
  try{
   const result=await studentAuthRequest({action:'lookup',university_number:number});
@@ -774,7 +774,7 @@ $('supervisorJoinRequestForm').addEventListener('submit',async e=>{
   region:$('joinSupervisorRegion').value.trim(),
   specialty:$('joinSupervisorSpecialty').value.trim()
  };
- if(!/^\\d{7,12}$/.test(payload.national_id)){showNotice('أدخل رقم هوية صحيحًا من 7 إلى 12 رقمًا.','error');return}
+ if(!/^\d{7,12}$/.test(payload.national_id)){showNotice('أدخل رقم هوية صحيحًا من 7 إلى 12 رقمًا.','error');return}
  button.disabled=true;button.textContent='جارٍ إرسال الطلب...';
  try{
   const result=await studentAuthRequest(payload,undefined,'supervisor-auth');
@@ -1249,7 +1249,7 @@ async function previewRosterFile(){
    const trueValues=['true','1','نعم','نشط','فعال','active','yes'].map(rosterHeaderKey);
    const falseValues=['false','0','لا','غيرنشط','متوقف','inactive','no'].map(rosterHeaderKey);
    const rowIssues=[],rowWarnings=[];
-   if(!/^\\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
+   if(!/^\d{5,}$/.test(number))rowIssues.push('رقم جامعي غير صحيح');
    if(number&&seen.has(number))rowIssues.push('رقم مكرر داخل الملف');seen.add(number);
    if(!name)rowIssues.push('الاسم فارغ');
    if(!gender)rowIssues.push('الجنس يجب أن يكون ذكر/أنثى أو male/female');
