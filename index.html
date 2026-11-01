@@ -238,11 +238,11 @@ body.supervisor-mode .home-hub{display:none!important}
     <p class="field-help">التسجيل متاح للطلاب المدرجين في كشف القسم المعتمد. يبدأ رقم الطالب بـ 122 ورقم الطالبة بـ 222، ويحدد النظام الفئة تلقائيًا من الرقم الجامعي.</p>
     <div class="field-help" style="background:#fff8e8;border-right:4px solid #d6b35c;padding:12px;border-radius:8px;line-height:1.9;margin:12px 0"> <strong>مهم قبل التسجيل:</strong> افتح كشف الإرشاد الأكاديمي أو صفحة الإرشاد الطلابي، وتحقق من عدد الساعات المجتازة/المنجزة الظاهر فيها. احتفظ بصورة واضحة للكشف يظهر فيها عدد الساعات، ويفضل أن يظهر معها اسمك أو رقمك الجامعي. بعد إنشاء الحساب، أدخل عدد الساعات كما هو تمامًا وارفع الصورة من قسم «إثبات الساعات». لا تكتب 36 ساعة إذا كان كشفك يظهر عددًا أقل؛ سيُراجع القسم الإثبات، والقاعدة المعتادة للتأهل هي 36 ساعة معتمدة أو استثناء رسمي موثق.</div>
     <form id="signupForm">
-     <div class="field"><label for="fullName">الاسم الرباعي كما في كشف القسم</label><input id="fullName" autocomplete="name" required></div>
-     <div class="field"><label for="universityNumber">الرقم الجامعي</label><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222…" autocomplete="off"></div>
+     <div class="field"><label for="universityNumber">الرقم الجامعي</label><div class="row"><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222…" autocomplete="off"><button class="btn" type="button" id="verifyStudentNumberBtn">تحقق من الرقم</button></div><p class="field-help" id="rosterLookupMessage">أدخل رقمك الجامعي واضغط «تحقق من الرقم» لجلب بياناتك من كشف القسم المعتمد.</p></div>
+     <div class="field"><label for="fullName">الاسم المعتمد في كشف القسم</label><input id="fullName" autocomplete="name" required readonly placeholder="يظهر بعد التحقق من الرقم الجامعي"></div>
      <div class="field"><label for="phone">رقم الجوال</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" required minlength="8" maxlength="20" placeholder="05xxxxxxxx"></div>
      <div class="field"><label for="signupArea">منطقة التدريب</label><select id="signupArea" required><option value="">اختر المنطقة</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
-     <div class="field"><label for="specialty">التخصص</label><select id="specialty" required><option value="">تحميل التخصصات…</option></select></div>
+     <div class="field"><label for="specialty">التخصص المعتمد</label><select id="specialty" required disabled><option value="">تحقق من الرقم الجامعي أولًا</option></select></div>
      <div class="field"><label for="signupSupervisor">المشرف</label><select id="signupSupervisor" required disabled><option value="">اختر المنطقة والتخصص أولًا</option></select><p class="field-help">ستظهر فقط الأسماء المطابقة للمنطقة والتخصص وفئة الطالب/الطالبة بعد تحميل القائمة الرسمية للمشرفين.</p></div>
      <div class="field"><label for="signupPassword">كلمة المرور (8 أحرف على الأقل)</label><div class="password-row"><input type="password" id="signupPassword" minlength="8" required autocomplete="new-password"><button class="btn ghost" type="button" id="toggleSignupPassword" onclick="return togglePasswordVisibility('signupPassword','toggleSignupPassword',event)">إظهار</button></div></div>
      <button class="btn gold" type="submit">إنشاء حساب الطالب</button>
@@ -660,6 +660,38 @@ bindPasswordToggle('loginPassword','toggleLoginPassword');
 bindPasswordToggle('signupPassword','toggleSignupPassword');
 ['signupArea','specialty','universityNumber'].forEach(id=>$(id).addEventListener('change',updateSignupSupervisorOptions));
 $('universityNumber').addEventListener('input',updateSignupSupervisorOptions);
+
+let verifiedStudentRoster=false;
+function clearRosterVerification(){
+ verifiedStudentRoster=false;
+ $('fullName').value='';
+ $('specialty').innerHTML='<option value="">تحقق من الرقم الجامعي أولًا</option>';
+ $('specialty').disabled=true;
+ $('rosterLookupMessage').textContent='تغيّر الرقم الجامعي؛ أعد التحقق قبل متابعة التسجيل.';
+ $('rosterLookupMessage').className='field-help';
+ updateSignupSupervisorOptions();
+}
+$('universityNumber').addEventListener('input',clearRosterVerification);
+$('verifyStudentNumberBtn').addEventListener('click',async()=>{
+ const number=$('universityNumber').value.trim();
+ const button=$('verifyStudentNumberBtn'), message=$('rosterLookupMessage');
+ if(!/^(122|222)\\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 أو 222.';message.className='field-help error';return}
+ button.disabled=true;button.textContent='جارٍ التحقق...';message.textContent='جارٍ البحث في كشف الطلبة المعتمد...';
+ try{
+  const result=await studentAuthRequest({action:'lookup',university_number:number});
+  const student=result.student;
+  if(!student)throw new Error('لم تصل بيانات الطالب من كشف القسم.');
+  $('fullName').value=student.full_name||'';
+  $('specialty').innerHTML='<option value="'+esc(student.specialty_id)+'">'+esc(student.specialty_name)+'</option>';
+  $('specialty').value=String(student.specialty_id);$('specialty').disabled=false;
+  verifiedStudentRoster=true;
+  message.textContent='تم التحقق بنجاح. الاسم والتخصص مطابقان لكشف القسم؛ أكمل بيانات التسجيل.';
+  message.className='field-help success';
+  updateSignupSupervisorOptions();
+ }catch(err){
+  clearRosterVerification();message.textContent=err.message||'تعذر التحقق من الرقم الجامعي.';message.className='field-help error';
+ }finally{button.disabled=false;button.textContent='تحقق من الرقم'}
+});
 async function studentAuthRequest(payload,accessToken,functionName='student-auth'){
  const headers={apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'};
  if(accessToken)headers.Authorization='Bearer '+accessToken;
@@ -689,6 +721,7 @@ $('signupForm').addEventListener('submit',async e=>{
  if(!sb){showNotice('تعذر الاتصال بخدمة الحسابات.','error');return}
  const number=$('universityNumber').value.trim();
  if(!((number.startsWith('122')&&number.length>=5)||(number.startsWith('222')&&number.length>=5))){showNotice('تحقق من الرقم الجامعي: 122 للطلاب و222 للطالبات.','error');return}
+ if(!verifiedStudentRoster){showNotice('تحقق من الرقم الجامعي أولًا ليجلب النظام اسمك وتخصصك من كشف القسم.','error');return}
  const supervisorId=$('signupSupervisor').value;
  if(!supervisorId){showNotice('اختر المشرف الذي يطابق المنطقة والتخصص وفئة الطالب. إذا لم يظهر مشرف مناسب، راجع القسم.','error');return}
  const submit=e.submitter; if(submit)submit.disabled=true;
