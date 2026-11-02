@@ -238,7 +238,7 @@ body.supervisor-mode .home-hub{display:none!important}
     <p class="field-help">التسجيل متاح للطلاب المدرجين في كشف القسم المعتمد. يبدأ رقم الطالب بـ 122 ورقم الطالبة بـ 222 أو 220، ويحدد النظام الفئة تلقائيًا من الرقم الجامعي.</p>
     <div class="field-help" style="background:#fff8e8;border-right:4px solid #d6b35c;padding:12px;border-radius:8px;line-height:1.9;margin:12px 0"> <strong>مهم قبل التسجيل:</strong> افتح كشف الإرشاد الأكاديمي أو صفحة الإرشاد الطلابي، وتحقق من عدد الساعات المجتازة/المنجزة الظاهر فيها. احتفظ بصورة واضحة للكشف يظهر فيها عدد الساعات، ويفضل أن يظهر معها اسمك أو رقمك الجامعي. بعد إنشاء الحساب، أدخل عدد الساعات كما هو تمامًا وارفع الصورة من قسم «إثبات الساعات». لا تكتب 36 ساعة إذا كان كشفك يظهر عددًا أقل؛ سيُراجع القسم الإثبات، والقاعدة المعتادة للتأهل هي 36 ساعة معتمدة أو استثناء رسمي موثق.</div>
     <form id="signupForm">
-     <div class="field"><label for="universityNumber">الرقم الجامعي</label><div class="row"><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222…" autocomplete="off"><button class="btn" type="button" id="verifyStudentNumberBtn">تحقق من الرقم</button></div><p class="field-help" id="rosterLookupMessage">أدخل رقمك الجامعي واضغط «تحقق من الرقم» لجلب بياناتك من كشف القسم المعتمد.</p></div>
+     <div class="field"><label for="universityNumber">الرقم الجامعي</label><div class="row"><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222… أو 220…" autocomplete="off"><button class="btn" type="button" id="verifyStudentNumberBtn">تحقق من الرقم</button></div><p class="field-help" id="rosterLookupMessage">أدخل رقمك الجامعي واضغط «تحقق من الرقم» لجلب بياناتك من كشف القسم المعتمد.</p></div>
      <div class="field"><label for="fullName">الاسم المعتمد في كشف القسم</label><input id="fullName" autocomplete="name" required readonly placeholder="يظهر بعد التحقق من الرقم الجامعي"></div>
      <div class="field"><label for="phone">رقم الجوال</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" required minlength="8" maxlength="20" placeholder="05xxxxxxxx"></div>
      <div class="field"><label for="signupArea">منطقة التدريب</label><select id="signupArea" required><option value="">اختر المنطقة</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
@@ -675,7 +675,7 @@ $('universityNumber').addEventListener('input',clearRosterVerification);
 $('verifyStudentNumberBtn').addEventListener('click',async()=>{
  const number=$('universityNumber').value.trim();
  const button=$('verifyStudentNumberBtn'), message=$('rosterLookupMessage');
- if(!/^(122|222)\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 للطلاب أو 222/220 للطالبات.';message.className='field-help error';return}
+ if(!/^(122|222|220)\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 للطلاب أو 222/220 للطالبات.';message.className='field-help error';return}
  button.disabled=true;button.textContent='جارٍ التحقق...';message.textContent='جارٍ البحث في كشف الطلبة المعتمد...';
  try{
   const result=await studentAuthRequest({action:'lookup',university_number:number});
@@ -1139,7 +1139,7 @@ async function renderSingleStudentEntry(){
   const specialtyId=Number(specialtyEl.value);
   saveDraft();
   if(!fullName){showNotice('أدخل الاسم كما هو في كشف القسم.','error');return}
-  if(!/^(122|222)\d{2,}$/.test(universityNumber)){showNotice('الرقم يجب أن يبدأ بـ 122 للطلاب أو 222/220 للطالبات، وبخمسة أرقام على الأقل.','error');return}
+  if(!/^(122|222|220)\d{2,}$/.test(universityNumber)){showNotice('الرقم يجب أن يبدأ بـ 122 للطلاب أو 222/220 للطالبات، وبخمسة أرقام على الأقل.','error');return}
   if(!Number.isInteger(specialtyId)||specialtyId<=0){showNotice('اختر التخصص الصحيح.','error');return}
   const gender=universityNumber.startsWith('122')?'male':'female';
   const btn=$('singleRosterSave');btn.disabled=true;btn.textContent='جارٍ التحقق والحفظ...';
