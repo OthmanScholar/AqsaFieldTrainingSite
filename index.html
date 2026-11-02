@@ -235,7 +235,7 @@ body.supervisor-mode .home-hub{display:none!important}
    </div>
    <div id="signupView" class="auth-view hidden">
     <h3>تسجيل طالب جديد</h3>
-    <p class="field-help">التسجيل متاح للطلاب المدرجين في كشف القسم المعتمد. يبدأ رقم الطالب بـ 122 ورقم الطالبة بـ 222، ويحدد النظام الفئة تلقائيًا من الرقم الجامعي.</p>
+    <p class="field-help">التسجيل متاح للطلاب المدرجين في كشف القسم المعتمد. يبدأ رقم الطالب بـ 122 ورقم الطالبة بـ 222 أو 220، ويحدد النظام الفئة تلقائيًا من الرقم الجامعي.</p>
     <div class="field-help" style="background:#fff8e8;border-right:4px solid #d6b35c;padding:12px;border-radius:8px;line-height:1.9;margin:12px 0"> <strong>مهم قبل التسجيل:</strong> افتح كشف الإرشاد الأكاديمي أو صفحة الإرشاد الطلابي، وتحقق من عدد الساعات المجتازة/المنجزة الظاهر فيها. احتفظ بصورة واضحة للكشف يظهر فيها عدد الساعات، ويفضل أن يظهر معها اسمك أو رقمك الجامعي. بعد إنشاء الحساب، أدخل عدد الساعات كما هو تمامًا وارفع الصورة من قسم «إثبات الساعات». لا تكتب 36 ساعة إذا كان كشفك يظهر عددًا أقل؛ سيُراجع القسم الإثبات، والقاعدة المعتادة للتأهل هي 36 ساعة معتمدة أو استثناء رسمي موثق.</div>
     <form id="signupForm">
      <div class="field"><label for="universityNumber">الرقم الجامعي</label><div class="row"><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222…" autocomplete="off"><button class="btn" type="button" id="verifyStudentNumberBtn">تحقق من الرقم</button></div><p class="field-help" id="rosterLookupMessage">أدخل رقمك الجامعي واضغط «تحقق من الرقم» لجلب بياناتك من كشف القسم المعتمد.</p></div>
@@ -577,7 +577,7 @@ function updateSignupSupervisorOptions(){
  const el=$('signupSupervisor');if(!el)return;
  const area=$('signupArea')?.value||'',specialtyEl=$('specialty'),specialtyName=specialtyEl?.selectedOptions?.[0]?.textContent||'';
  const number=String($('universityNumber')?.value||'').trim();
- const gender=number.startsWith('122')?'male':number.startsWith('222')?'female':null;
+ const gender=number.startsWith('122')?'male':(number.startsWith('222')||number.startsWith('220'))?'female':null;
  if(!area||!specialtyEl?.value||!gender){
   el.innerHTML='<option value="">أدخل الرقم الجامعي واختر المنطقة والتخصص أولًا</option>';el.disabled=true;return;
  }
@@ -675,7 +675,7 @@ $('universityNumber').addEventListener('input',clearRosterVerification);
 $('verifyStudentNumberBtn').addEventListener('click',async()=>{
  const number=$('universityNumber').value.trim();
  const button=$('verifyStudentNumberBtn'), message=$('rosterLookupMessage');
- if(!/^(122|222)\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 أو 222.';message.className='field-help error';return}
+ if(!/^(122|222)\d{2,}$/.test(number)){message.textContent='تحقق من الرقم الجامعي؛ يجب أن يبدأ بـ122 للطلاب أو 222/220 للطالبات.';message.className='field-help error';return}
  button.disabled=true;button.textContent='جارٍ التحقق...';message.textContent='جارٍ البحث في كشف الطلبة المعتمد...';
  try{
   const result=await studentAuthRequest({action:'lookup',university_number:number});
@@ -720,7 +720,7 @@ $('signupForm').addEventListener('submit',async e=>{
  e.preventDefault();
  if(!sb){showNotice('تعذر الاتصال بخدمة الحسابات.','error');return}
  const number=$('universityNumber').value.trim();
- if(!((number.startsWith('122')&&number.length>=5)||(number.startsWith('222')&&number.length>=5))){showNotice('تحقق من الرقم الجامعي: 122 للطلاب و222 للطالبات.','error');return}
+ if(!((number.startsWith('122')&&number.length>=5)||((number.startsWith('222')||number.startsWith('220'))&&number.length>=5))){showNotice('تحقق من الرقم الجامعي: 122 للطلاب و222 أو 220 للطالبات.','error');return}
  if(!verifiedStudentRoster){showNotice('تحقق من الرقم الجامعي أولًا ليجلب النظام اسمك وتخصصك من كشف القسم.','error');return}
  const supervisorId=$('signupSupervisor').value;
  if(!supervisorId){showNotice('اختر المشرف الذي يطابق المنطقة والتخصص وفئة الطالب. إذا لم يظهر مشرف مناسب، راجع القسم.','error');return}
@@ -1112,12 +1112,12 @@ async function loadAssignmentManager(){
 async function renderSingleStudentEntry(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('إضافة طالب للكشف متاحة لرئيس القسم والإدارة فقط.','error');return}
  const r=$('staffResults');
- r.innerHTML='<div class="card"><h3>إضافة طالب جديد إلى كشف الطلاب المؤهلين</h3><p class="muted">استخدم هذه الشاشة للطلاب الذين أُضيفوا حديثًا ولم يظهروا في ملف Excel السابق. هذه الإضافة تسمح للطالب بإنشاء حسابه بنفسه؛ لا تنشئ حسابًا تلقائيًا ولا تعتمد ساعات التدريب.</p><p class="muted small">يُحفظ ما تكتبه مؤقتًا في هذه الجلسة، حتى لا يضيع عند الانتقال إلى Word والعودة للصفحة.</p><form id="singleRosterForm"><div class="field"><label for="singleRosterName">الاسم الرباعي كما في كشف القسم</label><input id="singleRosterName" required maxlength="200" autocomplete="off"></div><div class="field"><label for="singleRosterNumber">الرقم الجامعي</label><input id="singleRosterNumber" required inputmode="numeric" pattern="(122|222)[0-9]{2,}" minlength="5" maxlength="20" placeholder="122… للطالب أو 222… للطالبة" autocomplete="off"></div><div class="field"><label>فئة الطالب</label><input id="singleRosterGender" readonly value="تُحدد تلقائيًا من الرقم الجامعي"></div><div class="field"><label for="singleRosterSpecialty">التخصص</label><select id="singleRosterSpecialty" required><option value="">جارٍ تحميل التخصصات...</option></select></div><button class="btn gold" id="singleRosterSave" type="submit">إضافة الطالب إلى الكشف</button></form><div id="singleRosterResult" aria-live="polite"></div></div>';
+ r.innerHTML='<div class="card"><h3>إضافة طالب جديد إلى كشف الطلاب المؤهلين</h3><p class="muted">استخدم هذه الشاشة للطلاب الذين أُضيفوا حديثًا ولم يظهروا في ملف Excel السابق. هذه الإضافة تسمح للطالب بإنشاء حسابه بنفسه؛ لا تنشئ حسابًا تلقائيًا ولا تعتمد ساعات التدريب.</p><p class="muted small">يُحفظ ما تكتبه مؤقتًا في هذه الجلسة، حتى لا يضيع عند الانتقال إلى Word والعودة للصفحة.</p><form id="singleRosterForm"><div class="field"><label for="singleRosterName">الاسم الرباعي كما في كشف القسم</label><input id="singleRosterName" required maxlength="200" autocomplete="off"></div><div class="field"><label for="singleRosterNumber">الرقم الجامعي</label><input id="singleRosterNumber" required inputmode="numeric" pattern="(122|222|220)[0-9]{2,}" minlength="5" maxlength="20" placeholder="122… للطالب أو 222/220… للطالبة" autocomplete="off"></div><div class="field"><label>فئة الطالب</label><input id="singleRosterGender" readonly value="تُحدد تلقائيًا من الرقم الجامعي"></div><div class="field"><label for="singleRosterSpecialty">التخصص</label><select id="singleRosterSpecialty" required><option value="">جارٍ تحميل التخصصات...</option></select></div><button class="btn gold" id="singleRosterSave" type="submit">إضافة الطالب إلى الكشف</button></form><div id="singleRosterResult" aria-live="polite"></div></div>';
  const form=$('singleRosterForm'),nameEl=$('singleRosterName'),numberEl=$('singleRosterNumber'),genderEl=$('singleRosterGender'),specialtyEl=$('singleRosterSpecialty'),result=$('singleRosterResult');
  const draftKey='aqsa_single_roster_draft_'+String(currentSession?.user?.id||'department');
  const readDraft=()=>{try{return JSON.parse(sessionStorage.getItem(draftKey)||'null')}catch(_){return null}};
  const saveDraft=()=>{try{sessionStorage.setItem(draftKey,JSON.stringify({full_name:nameEl.value,university_number:numberEl.value,specialty_id:specialtyEl.value,updated_at:Date.now()}))}catch(_){}};
- const syncGender=()=>{const value=String(numberEl.value||'').replace(/\s/g,'');genderEl.value=value.startsWith('122')?'ذكر':value.startsWith('222')?'أنثى':'يُحدد تلقائيًا من بادئة الرقم 122 أو 222'};
+ const syncGender=()=>{const value=String(numberEl.value||'').replace(/\s/g,'');genderEl.value=value.startsWith('122')?'ذكر':(value.startsWith('222')||value.startsWith('220'))?'أنثى':'يُحدد تلقائيًا من بادئة الرقم 122 أو 222 أو 220'};
  const {data:specialties,error:specialtyError}=await sb.from('specialties').select('id,name').eq('is_active',true).order('name');
  if(specialtyError){specialtyEl.innerHTML='<option value="">تعذر تحميل التخصصات</option>';showNotice('تعذر تحميل التخصصات: '+specialtyError.message,'error');return}
  specialtyEl.innerHTML='<option value="">اختر التخصص</option>'+(specialties||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
@@ -1139,7 +1139,7 @@ async function renderSingleStudentEntry(){
   const specialtyId=Number(specialtyEl.value);
   saveDraft();
   if(!fullName){showNotice('أدخل الاسم كما هو في كشف القسم.','error');return}
-  if(!/^(122|222)\d{2,}$/.test(universityNumber)){showNotice('الرقم يجب أن يبدأ بـ 122 للطلاب أو 222 للطالبات، وبخمسة أرقام على الأقل.','error');return}
+  if(!/^(122|222)\d{2,}$/.test(universityNumber)){showNotice('الرقم يجب أن يبدأ بـ 122 للطلاب أو 222/220 للطالبات، وبخمسة أرقام على الأقل.','error');return}
   if(!Number.isInteger(specialtyId)||specialtyId<=0){showNotice('اختر التخصص الصحيح.','error');return}
   const gender=universityNumber.startsWith('122')?'male':'female';
   const btn=$('singleRosterSave');btn.disabled=true;btn.textContent='جارٍ التحقق والحفظ...';
@@ -1259,11 +1259,11 @@ async function previewRosterFile(){
    let isActive=mapped.active?trueValues.includes(activeText):true;
    if(mapped.active&&falseValues.includes(activeText))isActive=false;
    let skipImport=false;
-   const expectedGender=number.startsWith('122')?'male':number.startsWith('222')?'female':'';
+   const expectedGender=number.startsWith('122')?'male':(number.startsWith('222')||number.startsWith('220'))?'female':'';
    if(!expectedGender||expectedGender!==gender){
     isActive=false;
     skipImport=true;
-    rowWarnings.push('بادئة الرقم أو فئة الطالب لا تطابق قاعدة التسجيل الحالية؛ استُبعد من الاستيراد لحين المراجعة');
+    rowWarnings.push('بادئة الرقم أو فئة الطالب لا تطابق قاعدة التسجيل الحالية (122 للطلاب و222/220 للطالبات)؛ استُبعد من الاستيراد لحين المراجعة');
    }
    if(hoursValue!==null&&Number.isFinite(hoursValue)&&hoursValue<36){isActive=false;rowWarnings.push('أقل من 36 ساعة؛ سيُحفظ السجل غير نشط');}
    if(rowIssues.length)issues.push({line,number,name,issues:rowIssues});
