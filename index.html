@@ -1326,7 +1326,8 @@ async function saveStudentCurrentArea(e){
  if(error){showNotice('تعذر تحديث منطقة السكن: '+error.message,'error');return}
  showNotice('تم تحديث منطقة السكن الحالية. يمكنك تعديلها مجددًا عند الانتقال.','success');
  await renderPortal();
-}\nasync function saveStudentPreference(e){
+}
+async function saveStudentPreference(e){
  e.preventDefault();
  const trainingType=$('prefTrainingType').value;
  const area=$('studentArea').value;
@@ -1754,7 +1755,8 @@ async function loadStudentRegistrations(){
   if(error){showNotice('تعذر تحديث المنطقة: '+error.message,'error');btn.disabled=false;return}
   showNotice('تم تحديث منطقة الطالب.','success');
   await loadStudentRegistrations();
- });\n out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
+ });
+ out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
   const studentUserId=btn.dataset.saveSupervisor;
   const select=document.getElementById('supervisorChoice_'+studentUserId);
   const supervisorId=Number(select?.value);
