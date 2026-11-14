@@ -857,10 +857,10 @@ async function loadSupervisorDashboard(){
   const activityRows=events?.length?events.map(ev=>'<div class="activity-item"><strong>'+esc(ev.description)+'</strong><span>'+esc(new Date(ev.created_at).toLocaleString('ar',{dateStyle:'medium',timeStyle:'short'}))+'</span></div>').join(''):'<p class="muted small">لا توجد حركات مسجلة حتى الآن.</p>';
   c.innerHTML='<div class="supervisor-toolbar">'+
    '<div class="supervisor-toolbar-title"><h2>بوابة المشرف</h2><p>إدارة الزيارات ومتابعة الطلبة المكلف بهم</p></div>'+
-   '<section class="card supervisor-work-card"><h3>الصلاحيات والخدمات المتاحة للمشرف</h3><div class="permission-tiles"><button class="permission-tile" id="supervisorVisitEntry"><span class="permission-icon">📝</span><span>إدخال الزيارات</span></button><button class="permission-tile" id="supervisorStudentNames"><span class="permission-icon">👥</span><span>أسماء الطلبة</span></button><button class="permission-tile" id="supervisorStudentSearch"><span class="permission-icon">🔎</span><span>استعلام عن طالب</span></button><button type="button" class="permission-tile" id="supervisorReportsBtn"><span class="permission-icon">📈</span><span>التقارير</span></button></div><div id="staffResults"></div></section></div>';
+   '<section class="card supervisor-work-card"><h3>الصلاحيات والخدمات المتاحة للمشرف</h3><div class="permission-tiles"><button class="permission-tile" id="supervisorVisitEntry"><span class="permission-icon">📝</span><span>إدخال الزيارات</span></button><button class="permission-tile" id="supervisorStudentNames"><span class="permission-icon">👥</span><span>أسماء الطلبة</span></button><button class="permission-tile" id="supervisorStudentSearch"><span class="permission-icon">🔎</span><span>استعلام عن طالب</span></button><button type="button" class="permission-tile" id="supervisorReportsBtn"><span class="permission-icon">📈</span><span>التقارير</span></button><button type="button" class="permission-tile" id="supervisorFormsBtn"><span class="permission-icon">📋</span><span>نماذج تقييم الطلاب</span></button></div><div id="staffResults"></div></section></div>';
   if($('supervisorVisitEntry'))$('supervisorVisitEntry').onclick=()=>{logSupervisorActivity('visit_form_open','فتح نموذج إدخال الزيارات');loadSupervisorVisitEntry()};
   if($('supervisorStudentNames'))$('supervisorStudentNames').onclick=()=>{logSupervisorActivity('view_students','عرض أسماء الطلبة المسندين');loadAssigned()};
-  if($('supervisorStudentSearch'))$('supervisorStudentSearch').onclick=()=>{logSupervisorActivity('student_search','فتح استعلام عن طالب');loadSupervisorStudentSearch()};if($('supervisorReportsBtn'))$('supervisorReportsBtn').onclick=openReportsPlaceholder;
+  if($('supervisorStudentSearch'))$('supervisorStudentSearch').onclick=()=>{logSupervisorActivity('student_search','فتح استعلام عن طالب');loadSupervisorStudentSearch()};if($('supervisorReportsBtn'))$('supervisorReportsBtn').onclick=openReportsPlaceholder;if($('supervisorFormsBtn'))$('supervisorFormsBtn').onclick=()=>{logSupervisorActivity('evaluation_forms_open','فتح نماذج تقييم الطلاب');loadSupervisorForms()};
  }catch(err){c.innerHTML='<div class="notice show error">تعذر تحميل لوحة المشرف: '+esc(err.message||'تحقق من صلاحيات الملف الشخصي وسجل النشاط.')+'</div>'}
 }
 async function loadStudentNotifications(){
@@ -1611,7 +1611,7 @@ async function loadSupervisorForms(){
    'علوم التربية البدنية':'التربية الرياضية',
    'السكرتاريا الدولية':'السكرتارية الدولية',
    'العلاقات العامة والإعلام':'الصحافة الإلكترونية',
-   'إدارة الأعمال':'العلوم المالية والمصرفية'
+   'إدارة الأعمال':'إدارة الأعمال'
   })[name]||name,template=supervisorFormTemplates[templateName];
   if(!student.value){area.innerHTML='<p class="muted">اختر الطالب أولًا.</p>';return}
   if(kind==='signature'){
