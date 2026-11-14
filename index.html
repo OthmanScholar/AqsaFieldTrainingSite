@@ -241,9 +241,9 @@ body.supervisor-mode .home-hub{display:none!important}
      <div class="field"><label for="universityNumber">الرقم الجامعي</label><div class="row"><input id="universityNumber" required inputmode="numeric" pattern="[0-9]{5,}" minlength="5" placeholder="122… أو 222… أو 220…" autocomplete="off"><button class="btn" type="button" id="verifyStudentNumberBtn">تحقق من الرقم</button></div><p class="field-help" id="rosterLookupMessage">أدخل رقمك الجامعي واضغط «تحقق من الرقم» لجلب بياناتك من كشف القسم المعتمد.</p></div>
      <div class="field"><label for="fullName">الاسم المعتمد في كشف القسم</label><input id="fullName" autocomplete="name" required readonly placeholder="يظهر بعد التحقق من الرقم الجامعي"></div>
      <div class="field"><label for="phone">رقم الجوال</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" required minlength="8" maxlength="20" placeholder="05xxxxxxxx"></div>
-     <div class="field"><label for="signupArea">منطقة التدريب</label><select id="signupArea" required><option value="">اختر المنطقة</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
+     <div class="field"><label for="signupArea">منطقة السكن الحالية (اختياري)</label><select id="signupArea"><option value="">غير محددة حاليًا</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
      <div class="field"><label for="specialty">التخصص المعتمد</label><select id="specialty" required disabled><option value="">تحقق من الرقم الجامعي أولًا</option></select></div>
-     <div class="field"><label for="signupSupervisor">المشرف</label><select id="signupSupervisor" required disabled><option value="">اختر المنطقة والتخصص أولًا</option></select><p class="field-help">ستظهر فقط الأسماء المطابقة للمنطقة والتخصص وفئة الطالب/الطالبة بعد تحميل القائمة الرسمية للمشرفين.</p></div>
+     <div class="field"><label for="signupSupervisor">المشرف</label><select id="signupSupervisor" required disabled><option value="">اختر المنطقة والتخصص أولًا</option></select><p class="field-help">تُعرض المشرفات/المشرفون المطابقون للتخصص وفئة الطالب أولًا، وتُستخدم المنطقة لترتيب الأفضلية فقط ويمكن تعديلها لاحقًا.</p></div>
      <div class="field"><label for="signupPassword">كلمة المرور (8 أحرف على الأقل)</label><div class="password-row"><input type="password" id="signupPassword" minlength="8" required autocomplete="new-password"><button class="btn ghost" type="button" id="toggleSignupPassword" onclick="return togglePasswordVisibility('signupPassword','toggleSignupPassword',event)">إظهار</button></div></div>
      <button class="btn gold" type="submit">إنشاء حساب الطالب</button>
     </form>
@@ -578,14 +578,14 @@ function updateSignupSupervisorOptions(){
  const area=$('signupArea')?.value||'',specialtyEl=$('specialty'),specialtyName=specialtyEl?.selectedOptions?.[0]?.textContent||'';
  const number=String($('universityNumber')?.value||'').trim();
  const gender=number.startsWith('122')?'male':(number.startsWith('222')||number.startsWith('220'))?'female':null;
- if(!area||!specialtyEl?.value||!gender){
-  el.innerHTML='<option value="">أدخل الرقم الجامعي واختر المنطقة والتخصص أولًا</option>';el.disabled=true;return;
+ if(!specialtyEl?.value||!gender){
+  el.innerHTML='<option value="">أدخل الرقم الجامعي وتحقق من التخصص أولًا</option>';el.disabled=true;return;
  }
- const matches=currentSupervisorRecords.filter(s=>s.id!=null&&signupRegionMatches(area,s.region)&&signupCategoryMatches(gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty));
+ const matches=currentSupervisorRecords.filter(s=>s.id!=null&&signupCategoryMatches(gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)).sort((a,b)=>Number(!!area&&signupRegionMatches(area,b.region))-Number(!!area&&signupRegionMatches(area,a.region)));
  if(!matches.length){
   el.innerHTML='<option value="">لا يوجد مشرف مطابق حاليًا؛ راجع القسم</option>';el.disabled=true;return;
  }
- el.innerHTML='<option value="">اختر المشرف المطابق</option>'+matches.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+' — '+esc(s.region)+'</option>').join('');
+ el.innerHTML='<option value="">اختر المشرف المناسب</option>'+matches.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+' — '+esc(s.region)+'</option>').join('');
  el.disabled=false;
 }
 
@@ -726,7 +726,7 @@ $('signupForm').addEventListener('submit',async e=>{
  if(!supervisorId){showNotice('اختر المشرف الذي يطابق المنطقة والتخصص وفئة الطالب. إذا لم يظهر مشرف مناسب، راجع القسم.','error');return}
  const submit=e.submitter; if(submit)submit.disabled=true;
  try{
-  const result=await studentAuthRequest({action:'signup',full_name:$('fullName').value.trim(),university_number:number,phone:$('phone').value.trim(),student_area:$('signupArea').value,specialty_id:Number($('specialty').value),supervisor_id:Number(supervisorId),password:$('signupPassword').value});
+  const result=await studentAuthRequest({action:'signup',full_name:$('fullName').value.trim(),university_number:number,phone:$('phone').value.trim(),student_area:$('signupArea').value||null,specialty_id:Number($('specialty').value),supervisor_id:Number(supervisorId),password:$('signupPassword').value});
   await acceptAuthSession(result);
   showNotice('تم إنشاء حساب الطالب وتسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر إنشاء الحساب.','error')}
@@ -1082,7 +1082,7 @@ async function loadAssignmentManager(){
     return;
    }
    const specialtyName=specMap.get(String(student.specialty_id))||'';
-   const matches=staff.filter(s=>signupRegionMatches(student.student_area,s.region)&&signupCategoryMatches(student.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty));
+   const matches=staff.filter(s=>signupCategoryMatches(student.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)).sort((a,b)=>Number(!!student.student_area&&signupRegionMatches(student.student_area,b.region))-Number(!!student.student_area&&signupRegionMatches(student.student_area,a.region)));
    assignSupervisorSelect.innerHTML=matches.length?'<option value="">اختر المشرف المطابق</option>'+matches.map(s=>'<option value="'+esc(s.user_id)+'">'+esc(s.full_name+' — '+s.region)+'</option>').join(''):'<option value="">لا يوجد مشرف نشط مطابق للمنطقة والتخصص والفئة</option>';
    assignSupervisorSelect.disabled=!matches.length;
    assignSubmitButton.disabled=!matches.length;
@@ -1095,8 +1095,8 @@ async function loadAssignmentManager(){
    const chosenSupervisor=staff.find(x=>x.user_id===supervisorId);
    if(!chosenSupervisor){showNotice('اختر مشرفًا من القائمة المطابقة.','error');return}
    const specialtyName=specMap.get(String(student.specialty_id))||'';
-   if(!signupRegionMatches(student.student_area,chosenSupervisor.region)||!signupCategoryMatches(student.gender,chosenSupervisor.category)||!signupSpecialtyMatches(specialtyName,chosenSupervisor.specialty)){
-    showNotice('المشرف لا يطابق تخصص الطالب أو فئته أو منطقته. اختر مشرفًا مطابقًا.','error');
+   if(!signupCategoryMatches(student.gender,chosenSupervisor.category)||!signupSpecialtyMatches(specialtyName,chosenSupervisor.specialty)){
+    showNotice('المشرف لا يطابق تخصص الطالب أو فئته. المنطقة عامل أفضلية وليست شرطًا. اختر مشرفًا مطابقًا للتخصص والفئة.','error');
     updateAssignSupervisorOptions();
     return;
    }
@@ -1730,15 +1730,15 @@ async function loadStudentRegistrations(){
   const specialtyName=specialties.get(String(p.specialty_id))||'';
   const rosterMatches=!!roster&&roster.is_active===true&&roster.gender===p.gender&&(roster.specialty_id==null||String(roster.specialty_id)===String(p.specialty_id));
   const rosterLabel=!roster?'الرقم غير موجود في الكشف':!roster.is_active?'الرقم غير نشط في الكشف':!rosterMatches?'بيانات الفئة/التخصص لا تطابق الكشف':'مطابق ونشط';
-  const suitable=supervisors.filter(s=>s.is_active!==false&&signupCategoryMatches(p.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)&&(!p.student_area||signupRegionMatches(p.student_area,s.region)));
+  const suitable=supervisors.filter(s=>s.is_active!==false&&signupCategoryMatches(p.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)).sort((a,b)=>Number(!!p.student_area&&signupRegionMatches(p.student_area,b.region))-Number(!!p.student_area&&signupRegionMatches(p.student_area,a.region)));
   const options='<option value="">'+(p.supervisor_name?'اختر لتغيير المشرف':'اختر المشرف المناسب')+'</option>'+suitable.map(s=>'<option value="'+s.id+'" '+(p.supervisor_name===s.name?'selected':'')+'>'+esc(s.name)+' — '+esc(s.region||'منطقة غير محددة')+'</option>').join('');
   const supervisorCell='<div class="field" style="min-width:230px"><select id="supervisorChoice_'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>'+options+'</select><div class="muted small">'+(p.supervisor_name?'المحفوظ حاليًا: '+esc(p.supervisor_name):suitable.length?'لم يُحفظ مشرف بعد':'لا يوجد مشرف نشط مطابق للتخصص والفئة والمنطقة')+'</div><button class="btn gold" type="button" data-save-supervisor="'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>حفظ اختيار المشرف</button></div>';
   const actions=status==='pending'
     ? (rosterMatches?'<button class="btn gold" data-student-review="'+esc(p.user_id)+'" data-status="approved">اعتماد التسجيل</button> ':'<span class="muted small">لا يمكن الاعتماد قبل تصحيح مطابقة الكشف.</span> ')+'<button class="btn ghost" data-student-review="'+esc(p.user_id)+'" data-status="rejected">رفض التسجيل</button> <button class="btn" style="background:#b7791f" data-student-return="'+esc(p.user_id)+'">إرجاع</button>'
     : '<span class="status">'+stateLabel(status)+'</span>';
-  return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialtyName||'—')+'</td><td>'+esc(p.student_area||'غير محددة')+'</td><td>'+supervisorCell+'</td><td>'+esc(rosterLabel)+'</td><td>'+esc(stateLabel(status))+'</td><td>'+esc(p.registration_review_note||'—')+'</td><td>'+actions+'</td></tr>';
+  return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialtyName||'—')+'</td><td><div class="field" style="min-width:150px"><select id="studentArea_'+esc(p.user_id)+'"><option value="">غير محددة</option>'+['غزة والشمال','الوسطى','خانيونس','رفح'].map(a=>'<option value="'+a+'" '+(p.student_area===a?'selected':'')+'>'+a+'</option>').join('')+'</select><button class="btn ghost" type="button" data-save-student-area="'+esc(p.user_id)+'">حفظ المنطقة</button></div></td><td>'+supervisorCell+'</td><td>'+esc(rosterLabel)+'</td><td>'+esc(stateLabel(status))+'</td><td>'+esc(p.registration_review_note||'—')+'</td><td>'+actions+'</td></tr>';
  }).join('')+'</tbody></table></div></div>';
- out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
+ out.querySelectorAll('[data-save-student-area]').forEach(btn=>btn.onclick=async()=>{\n  const studentUserId=btn.dataset.saveStudentArea;\n  const area=document.getElementById('studentArea_'+studentUserId)?.value||null;\n  if(!confirm('حفظ منطقة السكن الحالية للطالب؟ يمكن تعديلها لاحقًا عند الانتقال.'))return;\n  btn.disabled=true;\n  const {error}=await sb.from('student_profiles').update({student_area:area}).eq('user_id',studentUserId);\n  if(error){showNotice('تعذر تحديث المنطقة: '+error.message,'error');btn.disabled=false;return}\n  showNotice('تم تحديث منطقة الطالب.','success');\n  await loadStudentRegistrations();\n });\n out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
   const studentUserId=btn.dataset.saveSupervisor;
   const select=document.getElementById('supervisorChoice_'+studentUserId);
   const supervisorId=Number(select?.value);
