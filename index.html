@@ -1745,7 +1745,16 @@ async function loadStudentRegistrations(){
     : '<span class="status">'+stateLabel(status)+'</span>';
   return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specialtyName||'—')+'</td><td><div class="field" style="min-width:150px"><select id="studentArea_'+esc(p.user_id)+'"><option value="">غير محددة</option>'+['غزة والشمال','الوسطى','خانيونس','رفح'].map(a=>'<option value="'+a+'" '+(p.student_area===a?'selected':'')+'>'+a+'</option>').join('')+'</select><button class="btn ghost" type="button" data-save-student-area="'+esc(p.user_id)+'">حفظ المنطقة</button></div></td><td>'+supervisorCell+'</td><td>'+esc(rosterLabel)+'</td><td>'+esc(stateLabel(status))+'</td><td>'+esc(p.registration_review_note||'—')+'</td><td>'+actions+'</td></tr>';
  }).join('')+'</tbody></table></div></div>';
- out.querySelectorAll('[data-save-student-area]').forEach(btn=>btn.onclick=async()=>{\n  const studentUserId=btn.dataset.saveStudentArea;\n  const area=document.getElementById('studentArea_'+studentUserId)?.value||null;\n  if(!confirm('حفظ منطقة السكن الحالية للطالب؟ يمكن تعديلها لاحقًا عند الانتقال.'))return;\n  btn.disabled=true;\n  const {error}=await sb.from('student_profiles').update({student_area:area}).eq('user_id',studentUserId);\n  if(error){showNotice('تعذر تحديث المنطقة: '+error.message,'error');btn.disabled=false;return}\n  showNotice('تم تحديث منطقة الطالب.','success');\n  await loadStudentRegistrations();\n });\n out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
+ out.querySelectorAll('[data-save-student-area]').forEach(btn=>btn.onclick=async()=>{
+  const studentUserId=btn.dataset.saveStudentArea;
+  const area=document.getElementById('studentArea_'+studentUserId)?.value||null;
+  if(!confirm('حفظ منطقة السكن الحالية للطالب؟ يمكن تعديلها لاحقًا عند الانتقال.'))return;
+  btn.disabled=true;
+  const {error}=await sb.from('student_profiles').update({student_area:area}).eq('user_id',studentUserId);
+  if(error){showNotice('تعذر تحديث المنطقة: '+error.message,'error');btn.disabled=false;return}
+  showNotice('تم تحديث منطقة الطالب.','success');
+  await loadStudentRegistrations();
+ });\n out.querySelectorAll('[data-save-supervisor]').forEach(btn=>btn.onclick=async()=>{
   const studentUserId=btn.dataset.saveSupervisor;
   const select=document.getElementById('supervisorChoice_'+studentUserId);
   const supervisorId=Number(select?.value);
