@@ -1319,7 +1319,14 @@ async function loadStudentPreference(){
  if(error||!data)return;
  $('studentArea').value=data.student_area||'';$('prefTrainingType').value=data.training_type||'institution';$('prefEntity').value=data.preferred_training_entity_id||'';$('prefEntityName').value=data.proposed_entity_name||'';$('prefEntityLocation').value=data.proposed_entity_location||'';
 }
-async function saveStudentCurrentArea(e){\n e.preventDefault();\n const area=$('studentCurrentArea').value||null;\n const {error}=await sb.from('student_profiles').update({student_area:area}).eq('user_id',currentSession.user.id);\n if(error){showNotice('تعذر تحديث منطقة السكن: '+error.message,'error');return}\n showNotice('تم تحديث منطقة السكن الحالية. يمكنك تعديلها مجددًا عند الانتقال.','success');\n await renderPortal();\n}\nasync function saveStudentPreference(e){
+async function saveStudentCurrentArea(e){
+ e.preventDefault();
+ const area=$('studentCurrentArea').value||null;
+ const {error}=await sb.from('student_profiles').update({student_area:area}).eq('user_id',currentSession.user.id);
+ if(error){showNotice('تعذر تحديث منطقة السكن: '+error.message,'error');return}
+ showNotice('تم تحديث منطقة السكن الحالية. يمكنك تعديلها مجددًا عند الانتقال.','success');
+ await renderPortal();
+}\nasync function saveStudentPreference(e){
  e.preventDefault();
  const trainingType=$('prefTrainingType').value;
  const area=$('studentArea').value;
