@@ -1180,7 +1180,7 @@ async function loadAssignmentManager(){
     if(data!==true)throw new Error('لم يتم العثور على التكليف أو أنه أزيل مسبقًا.');
     showNotice('تمت إزالة الطالب من قائمة المشرف فقط، وبيانات الطالب ما زالت محفوظة.','success');
     await loadAssignmentManager();
-   }catch(err){showNotice('تعذرت إزالة التكليف: '+(err.message||'تحقق من الصلاحيات.','error'));btn.disabled=false}
+   }catch(err){showNotice('تعذرت إزالة التكليف: '+(err.message||'تحقق من الصلاحيات.'),'error');btn.disabled=false}
   });
  }catch(err){body.innerHTML='<p class="notice show error">تعذر تحميل بيانات التوزيع: '+esc(err.message||'تحقق من الجداول والصلاحيات في Supabase.')+'</p>'}
 }
