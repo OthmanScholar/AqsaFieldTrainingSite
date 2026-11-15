@@ -1623,7 +1623,7 @@ async function loadWorkloadReport(){
   if(semester.length<3){showNotice('أدخل رمز الفصل الدراسي أولًا.','error');return}
   out.innerHTML='<p>جارٍ تحميل كشف الأعباء...</p>';
   const isHead=['admin','department_head'].includes(currentRole);
-  let aq=sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').limit(1000);
+  let aq=sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id,semester_code').eq('semester_code',semester).limit(1000);
   if(!isHead)aq=aq.eq('supervisor_user_id',currentSession.user.id);
   const [ar,vr,rr]=await Promise.all([
    aq,
