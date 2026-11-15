@@ -447,14 +447,18 @@ async function loadDocuments(){
  const el=$('documentsList');
  if(!el||!sb)return;
  el.textContent='جارٍ تحميل النماذج المعتمدة...';
- const {data,error}=await sb.from('training_documents').select('id,title,document_type,storage_path,original_filename,created_at').eq('is_published',true).order('created_at',{ascending:false}).limit(200);
+ const audience=currentRole==='supervisor'?'supervisors':(['admin','department_head'].includes(currentRole)?'staff':'students');
+ const {data,error}=await sb.from('training_documents')
+  .select('id,title,document_type,specialty,target_audience,storage_path,original_filename,created_at')
+  .eq('is_published',true).in('target_audience',['all',audience])
+  .order('created_at',{ascending:false}).limit(200);
  if(error){el.innerHTML='<p class="notice show error">تعذر تحميل النماذج المعتمدة. يرجى إبلاغ القسم.</p>';return}
  const docs=data||[];
- if(!docs.length){el.textContent='لم تُرفع ملفات النماذج المعتمدة بعد.';return}
- const labels={form:'نموذج',guide:'دليل',letter:'كتاب رسمي',other:'أخرى'};
- el.innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم الملف</th><th>النوع</th><th>تاريخ الإضافة</th><th>تحميل</th></tr></thead><tbody>'+docs.map(d=>{
+ if(!docs.length){el.textContent='لا توجد وثائق منشورة مخصصة لهذه الفئة حتى الآن.';return}
+ const labels={form:'نموذج رسمي',guide:'دليل إرشادي',letter:'كتاب رسمي',other:'وثيقة أخرى'};
+ el.innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم الوثيقة</th><th>النوع</th><th>التخصص</th><th>تاريخ الإضافة</th><th>عرض / تحميل</th></tr></thead><tbody>'+docs.map(d=>{
   const u=sb.storage.from('training-documents').getPublicUrl(d.storage_path).data.publicUrl;
-  return '<tr><td>'+esc(d.title)+'</td><td>'+esc(labels[d.document_type]||'أخرى')+'</td><td>'+esc(d.created_at?new Date(d.created_at).toLocaleDateString('ar'): '—')+'</td><td><a class="btn" href="'+esc(u)+'" target="_blank" rel="noopener">عرض / تحميل</a></td></tr>';
+  return '<tr><td>'+esc(d.title)+'</td><td>'+esc(labels[d.document_type]||'وثيقة أخرى')+'</td><td>'+esc(d.specialty||'عام — جميع التخصصات')+'</td><td>'+esc(d.created_at?new Date(d.created_at).toLocaleDateString('ar'): '—')+'</td><td><a class="btn" href="'+esc(u)+'" target="_blank" rel="noopener">عرض / تحميل</a></td></tr>';
  }).join('')+'</tbody></table></div>';
 }
 
