@@ -515,48 +515,79 @@ async function renderSupervisorAccountManager(){
  }catch(err){out.innerHTML='<p class="notice show error">'+esc(err.message||'تعذر تحميل حالة حسابات المشرفين.')+'</p>'}
 }
 async function renderDocumentManager(){
- if(!['admin','department_head'].includes(currentRole)){showNotice('رفع النماذج متاح لرئيس القسم فقط.','error');return}
+ if(!['admin','department_head'].includes(currentRole)){showNotice('إدارة المكتبة الرسمية متاحة لرئيس القسم فقط.','error');return}
  const r=$('staffResults');
- r.innerHTML='<div class="card"><h3>إدارة النماذج الرسمية</h3><p class="muted">ارفع النماذج المعتمدة بصيغة PDF أو Word أو Excel. الملفات المنشورة تظهر في صفحة «نماذج الطلاب».</p><form id="documentUploadForm" class="form-grid"><label>اسم النموذج<input id="documentTitle" required maxlength="200" placeholder="مثال: نموذج تقييم المشرف"></label><label>نوع الملف<select id="documentType" required><option value="form">نموذج</option><option value="guide">دليل</option><option value="letter">كتاب رسمي</option><option value="other">أخرى</option></select></label><label class="full">الملف الرسمي<input id="documentFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" required></label><div><button class="btn gold" type="submit">رفع ونشر النموذج</button></div></form><div id="documentManagerList">جارٍ تحميل الملفات...</div></div>';
- const form=$('documentUploadForm');
+ const specialties=[
+  'عام — جميع التخصصات','إدارة الأعمال','السكرتاريا الدولية','العلوم المالية والمصرفية',
+  'العلاقات العامة والإعلام','الصحافة الإلكترونية','الوسائط المتعددة',
+  'تكنولوجيا المعلومات والاتصالات','برمجة تطبيقات الهواتف الذكية','التصميم الجرافيكي',
+  'أمن المعلومات','تربية الطفل','العلاج الوظيفي','علوم التربية البدنية'
+ ];
+ const specialtyOptions=specialties.map((x,i)=>'<option value="'+esc(i===0?'':x)+'">'+esc(x)+'</option>').join('');
+ r.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h3 style="margin-bottom:6px">مكتبة النماذج والوثائق الرسمية</h3><p class="muted">مكان موحد لنشر النماذج والأدلة والكتب، مع تصنيفها حسب التخصص والجهة المستفيدة والتحكم في ظهورها.</p></div><span class="badge">إدارة رئيس القسم</span></div><div class="form-grid" style="margin:14px 0"><label>اسم الوثيقة<input id="documentTitle" required maxlength="200" placeholder="مثال: دليل التدريب الميداني"></label><label>تصنيف الوثيقة<select id="documentType" required><option value="form">نموذج رسمي</option><option value="guide">دليل إرشادي</option><option value="letter">كتاب رسمي</option><option value="other">تعميم / وثيقة أخرى</option></select></label><label>التخصص المرتبط<select id="documentSpecialty">'+specialtyOptions+'</select></label><label>الجهة المستفيدة<select id="documentAudience"><option value="all">الجميع</option><option value="students">الطلبة</option><option value="supervisors">المشرفون</option><option value="staff">رئيس القسم والموظفون</option></select></label><label class="full">الملف الرسمي<input id="documentFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv" required><span class="muted small">PDF أو Word أو Excel — الحد الأقصى 20 ميغابايت</span></label><div class="full"><button class="btn gold" id="documentUploadButton" type="submit" form="documentUploadForm">رفع الوثيقة إلى المكتبة</button></div></div><form id="documentUploadForm" style="display:none"></form><div class="divider"></div><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>فهرس المكتبة</h3><span id="documentCount" class="muted small">جارٍ تحميل الوثائق...</span></div><div class="form-grid" style="margin:10px 0"><label>بحث بالاسم<input id="documentSearch" placeholder="اكتب اسم النموذج أو الوثيقة..."></label><label>التخصص<select id="documentFilterSpecialty"><option value="">كل التخصصات</option>'+specialtyOptions+'</select></label><label>الجهة المستفيدة<select id="documentFilterAudience"><option value="">كل الجهات</option><option value="all">الجميع</option><option value="students">الطلبة</option><option value="supervisors">المشرفون</option><option value="staff">الموظفون</option></select></label><label>حالة النشر<select id="documentFilterStatus"><option value="published">المنشور</option><option value="all">الكل</option><option value="draft">غير المنشور</option></select></label></div><div id="documentManagerList">جارٍ تحميل المكتبة...</div></div>';
+ const form=$('documentUploadForm'),uploadButton=$('documentUploadButton');
  form.onsubmit=async e=>{
   e.preventDefault();
   if(!currentSession?.user?.id||!['admin','department_head'].includes(currentRole)){showNotice('انتهت الجلسة أو لا تملك صلاحية رفع الملفات.','error');return}
   const title=$('documentTitle').value.trim(),type=$('documentType').value,file=$('documentFile').files[0];
-  if(!title||!file){showNotice('أدخل اسم النموذج واختر الملف.','error');return}
+  const specialty=$('documentSpecialty').value||null,audience=$('documentAudience').value;
+  if(!title||!file){showNotice('أدخل اسم الوثيقة واختر الملف.','error');return}
   if(file.size>20*1024*1024){showNotice('حجم الملف الأقصى 20 ميغابايت.','error');return}
   const ext=(file.name.split('.').pop()||'').toLowerCase();
   if(!['pdf','doc','docx','xls','xlsx','csv'].includes(ext)){showNotice('امتداد الملف غير مدعوم.','error');return}
   const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
   const path=currentSession.user.id+'/'+Date.now()+'-'+safeName;
-  const button=form.querySelector('button[type="submit"]');button.disabled=true;button.textContent='جارٍ الرفع...';
+  uploadButton.disabled=true;uploadButton.textContent='جارٍ رفع الوثيقة...';
   try{
    const {error:uploadError}=await sb.storage.from('training-documents').upload(path,file,{upsert:false,contentType:file.type||undefined});
    if(uploadError)throw uploadError;
    const {error:recordError}=await sb.from('training_documents').insert({
-    title,document_type:type,storage_path:path,original_filename:file.name,
-    content_type:file.type||null,byte_size:file.size,uploaded_by:currentSession.user.id,is_published:true
+    title,document_type:type,specialty,target_audience:audience,storage_path:path,
+    original_filename:file.name,content_type:file.type||null,byte_size:file.size,
+    uploaded_by:currentSession.user.id,is_published:true
    });
-   if(recordError){
-    await sb.storage.from('training-documents').remove([path]);
-    throw recordError;
-   }
-   showNotice('تم رفع النموذج ونشره للطلاب بنجاح.','success');
-   form.reset();
-   await renderDocumentManager();
-   await loadDocuments();
-  }catch(err){showNotice('تعذر رفع النموذج: '+(err?.message||'راجع صلاحيات التخزين وجدول النماذج.'),'error')}
-  finally{const b=$('documentUploadForm')?.querySelector('button[type="submit"]');if(b){b.disabled=false;b.textContent='رفع ونشر النموذج'}}
+   if(recordError){await sb.storage.from('training-documents').remove([path]);throw recordError}
+   showNotice('تم رفع الوثيقة ونشرها في المكتبة بنجاح.','success');
+   $('documentTitle').value='';$('documentFile').value='';$('documentSpecialty').value='';$('documentAudience').value='all';
+   await refreshDocumentLibrary();await loadDocuments();
+  }catch(err){showNotice('تعذر رفع الوثيقة: '+(err?.message||'راجع صلاحيات التخزين وجدول الوثائق.'),'error')}
+  finally{uploadButton.disabled=false;uploadButton.textContent='رفع الوثيقة إلى المكتبة'}
  };
- const list=$('documentManagerList');
- const {data,error}=await sb.from('training_documents').select('id,title,document_type,storage_path,original_filename,created_at,is_published').order('created_at',{ascending:false}).limit(200);
- if(error){list.textContent='تعذر تحميل قائمة الملفات: '+error.message;return}
- const docs=data||[],labels={form:'نموذج',guide:'دليل',letter:'كتاب رسمي',other:'أخرى'};
- if(!docs.length){list.textContent='لا توجد نماذج مرفوعة حتى الآن.';return}
- list.innerHTML='<h4>الملفات المرفوعة</h4><div class="tablewrap"><table><thead><tr><th>الاسم</th><th>النوع</th><th>الحالة</th><th>عرض</th></tr></thead><tbody>'+docs.map(d=>{
-  const u=sb.storage.from('training-documents').getPublicUrl(d.storage_path).data.publicUrl;
-  return '<tr><td>'+esc(d.title)+'</td><td>'+esc(labels[d.document_type]||'أخرى')+'</td><td>'+(d.is_published?'منشور':'غير منشور')+'</td><td><a href="'+esc(u)+'" target="_blank" rel="noopener">فتح</a></td></tr>';
- }).join('')+'</tbody></table></div>';
+ async function refreshDocumentLibrary(){
+  const list=$('documentManagerList');
+  const {data,error}=await sb.from('training_documents')
+   .select('id,title,document_type,specialty,target_audience,storage_path,original_filename,byte_size,created_at,is_published')
+   .order('created_at',{ascending:false}).limit(300);
+  if(error){list.innerHTML='<p class="notice show error">تعذر تحميل المكتبة: '+esc(error.message)+'</p>';return}
+  const docs=data||[],labels={form:'نموذج رسمي',guide:'دليل إرشادي',letter:'كتاب رسمي',other:'وثيقة أخرى'},
+   audienceLabels={all:'الجميع',students:'الطلبة',supervisors:'المشرفون',staff:'الموظفون'};
+  $('documentCount').textContent=docs.length+' وثيقة في المكتبة';
+  const render=()=>{
+   const q=String($('documentSearch').value||'').trim().toLowerCase(),
+    sp=$('documentFilterSpecialty').value,au=$('documentFilterAudience').value,
+    st=$('documentFilterStatus').value;
+   const filtered=docs.filter(d=>(!q||(d.title+' '+d.original_filename).toLowerCase().includes(q))&&(!sp||(d.specialty||'')===sp)&&(!au||d.target_audience===au)&&(st==='all'||(st==='published'?d.is_published:!d.is_published)));
+   if(!filtered.length){list.innerHTML='<div class="notice show">لا توجد وثائق تطابق خيارات البحث الحالية.</div>';return}
+   list.innerHTML='<div class="tablewrap"><table><thead><tr><th>الوثيقة</th><th>التصنيف</th><th>التخصص</th><th>الجهة</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>'+filtered.map(d=>{
+    const u=sb.storage.from('training-documents').getPublicUrl(d.storage_path).data.publicUrl;
+    const size=d.byte_size?((d.byte_size/1024/1024).toFixed(2)+' MB'):'—';
+    const date=d.created_at?new Date(d.created_at).toLocaleDateString('ar-EG'):'—';
+    return '<tr><td><strong>'+esc(d.title)+'</strong><div class="muted small">'+esc(d.original_filename)+' · '+size+' · '+date+'</div></td><td>'+esc(labels[d.document_type]||'وثيقة أخرى')+'</td><td>'+esc(d.specialty||'عام')+'</td><td>'+esc(audienceLabels[d.target_audience]||'الجميع')+'</td><td>'+(d.is_published?'<span class="badge success">منشور</span>':'<span class="badge">مسودة</span>')+'</td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn small" href="'+esc(u)+'" target="_blank" rel="noopener">معاينة</a><button class="btn small '+(d.is_published?'danger':'gold')+'" data-document-toggle="'+d.id+'" data-published="'+(d.is_published?'true':'false')+'">'+(d.is_published?'إيقاف النشر':'نشر')+'</button></div></td></tr>';
+   }).join('')+'</tbody></table></div>';
+   list.querySelectorAll('[data-document-toggle]').forEach(btn=>btn.onclick=async()=>{
+    const id=Number(btn.dataset.documentToggle),next=btn.dataset.published!=='true';
+    btn.disabled=true;
+    const {error:updateError}=await sb.from('training_documents').update({is_published:next}).eq('id',id);
+    if(updateError){showNotice('تعذر تحديث حالة النشر: '+updateError.message,'error');btn.disabled=false;return}
+    const target=docs.find(d=>d.id===id);if(target)target.is_published=next;
+    showNotice(next?'تم نشر الوثيقة للجهة المحددة.':'تم إيقاف نشر الوثيقة دون حذفها.','success');
+    render();await loadDocuments();
+   });
+  };
+  ['documentSearch','documentFilterSpecialty','documentFilterAudience','documentFilterStatus'].forEach(id=>$(id).addEventListener(id==='documentSearch'?'input':'change',render));
+  render();
+ }
+ await refreshDocumentLibrary();
 }
 
 const supervisorSeed=[
