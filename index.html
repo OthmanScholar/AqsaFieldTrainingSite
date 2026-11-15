@@ -195,6 +195,15 @@ body.supervisor-mode .home-hub{display:none!important}
 #assignmentManagerBody .btn.danger:hover{background:#ffe2e3}
 @media(max-width:760px){#assignmentManagerBody .assignment-stats{grid-template-columns:1fr}#assignmentManagerBody .assignment-filter-grid,#assignmentManagerBody .assignment-add-card form{grid-template-columns:1fr}#assignmentManagerBody .assignment-add-card .btn{width:100%}}
 
+
+#assignmentManagerBody .assignment-student-filter{max-width:560px;margin:12px 0}
+#assignmentManagerBody .assignment-student-preview{margin:14px 0 2px;padding:15px 17px;border:1px solid #d7e4f0;border-radius:14px;background:#fff;min-height:58px;color:#75879a}
+#assignmentManagerBody .assignment-preview-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;color:#174574}
+#assignmentManagerBody .assignment-preview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+#assignmentManagerBody .assignment-preview-grid>div{display:grid;gap:3px;padding:9px 11px;border-radius:10px;background:#f4f8fc;min-width:0}
+#assignmentManagerBody .assignment-preview-grid small{font-size:.78rem;color:#71859a}
+#assignmentManagerBody .assignment-preview-grid strong{font-size:.9rem;color:#294d70;overflow-wrap:anywhere}
+@media(max-width:700px){#assignmentManagerBody .assignment-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -1171,9 +1180,29 @@ async function loadAssignmentManager(){
     (assigned.length?assigned.map(a=>{const p=studentMap.get(a.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(a.specialty_id||p.specialty_id))||'—')+'</td><td>'+esc(entityMap.get(String(a.training_entity_id))||'لم تُحدد')+'</td><td><button type="button" class="btn danger small" data-remove-assignment="'+esc(a.id)+'">إزالة من قائمة المشرف</button></td></tr>'}).join(''):'<tr><td colspan="5">لا يوجد طلاب مسندون لهذا المشرف حتى الآن.</td></tr>')+
     '</tbody></table></div>'+
     '<div class="assignment-add-card"><div class="assignment-section-heading"><span class="assignment-step">03</span><div><h4>إضافة طالب للمشرف</h4><p>اختر طالبًا مؤهلًا وغير مسند.</p></div></div><p class="muted small">تظهر هنا فقط أسماء الطلاب المؤهلين غير المسندين إلى أي مشرف، والمتوافقين مع مجموعة هذا المشرف ومنطقته وفئته. يظهر تخصص كل طالب بجانب اسمه.</p>'+
+    '<div class="assignment-student-filter"><label>ابحث عن الطالب بالاسم أو الرقم الجامعي<input id="assignmentStudentSearch" type="search" placeholder="مثال: حاتم أو 1220254001" '+(!available.length?'disabled':'')+'></label></div>'+
     '<form id="addStudentToSupervisorForm" class="form-grid"><label>الطالب والتخصص<select id="assignmentStudentToAdd" required><option value="">اختر الطالب</option>'+available.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.full_name+' — '+p.university_number+' — '+(specMap.get(String(p.specialty_id))||'تخصص غير معروف'))+'</option>').join('')+'</select></label><label>جهة التدريب<select id="assignmentEntityToAdd">'+entityOptions+'</select></label><div><button class="btn gold" type="submit" '+(!available.length?'disabled':'')+'>إسناد الطالب إلى هذا المشرف</button></div></form>'+
+    '<div id="assignmentStudentPreview" class="assignment-student-preview"><span>اختر طالبًا لعرض بياناته وساعات إنجازه قبل الإسناد.</span></div>'+
     (!available.length?'<p class="muted">لا يوجد حاليًا طالب مؤهل وغير مسند يطابق هذا المشرف.</p>':'')+'</div>';
    const addForm=$('addStudentToSupervisorForm');
+   const studentSelect=$('assignmentStudentToAdd');
+   const studentSearch=$('assignmentStudentSearch');
+   const studentPreview=$('assignmentStudentPreview');
+   const renderStudentPreview=()=>{
+    const p=available.find(x=>x.user_id===studentSelect.value);
+    if(!p){studentPreview.innerHTML='<span>اختر طالبًا لعرض بياناته وساعات إنجازه قبل الإسناد.</span>';return}
+    studentPreview.innerHTML='<div class="assignment-preview-heading"><strong>'+esc(p.full_name||'—')+'</strong><span class="status">'+esc(eligibilityLabel(p.eligibility_status))+'</span></div>'+
+     '<div class="assignment-preview-grid"><div><small>الرقم الجامعي</small><strong>'+esc(p.university_number||'—')+'</strong></div><div><small>التخصص</small><strong>'+esc(specMap.get(String(p.specialty_id))||'—')+'</strong></div><div><small>الساعات المجتازة</small><strong>'+esc(String(p.completed_hours??'غير محدد'))+' ساعة</strong></div><div><small>المنطقة</small><strong>'+esc(p.student_area||'غير محددة')+'</strong></div></div>';
+   };
+   studentSelect.addEventListener('change',renderStudentPreview);
+   studentSearch.addEventListener('input',()=>{
+    const q=normalizeArabicMatch(studentSearch.value);
+    const current=studentSelect.value;
+    const filtered=available.filter(p=>normalizeArabicMatch((p.full_name||'')+' '+(p.university_number||'')).includes(q));
+    studentSelect.innerHTML='<option value="">'+(filtered.length?'اختر الطالب':'لا توجد نتيجة مطابقة')+'</option>'+filtered.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.full_name+' — '+p.university_number+' — '+(specMap.get(String(p.specialty_id))||'تخصص غير معروف'))+'</option>').join('');
+    if(filtered.some(p=>p.user_id===current))studentSelect.value=current;
+    renderStudentPreview();
+   });
    addForm.onsubmit=async e=>{
     e.preventDefault();
     const studentId=$('assignmentStudentToAdd').value,entityVal=$('assignmentEntityToAdd').value||null;
