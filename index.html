@@ -1238,9 +1238,9 @@ async function loadAssignmentManager(){
     if(error)throw error;
     showNotice(old?'تم تغيير المشرف وتوثيق العملية.':'تم إسناد الطالب وتوثيق العملية.','success');
     await loadAssignmentManager();
-   }catch(err){showNotice('تعذر حفظ الإسناد: '+(err.message||'تحقق من الصلاحيات والأهلية.','error'));saveBtn.disabled=false}
+   }catch(err){showNotice('تعذر حفظ الإسناد: '+(err.message||'تحقق من الصلاحيات والأهلية.'),'error');saveBtn.disabled=false}
   });
-  root.addEventListener('click',async e=>{
+  body.addEventListener('click',async e=>{
    const btn=e.target.closest('[data-remove-assignment]');if(!btn)return;
    const id=Number(btn.dataset.removeAssignment),assignment=currentAssignments.find(a=>Number(a.id)===id);
    const p=assignment?studentMap.get(assignment.student_user_id):null;
