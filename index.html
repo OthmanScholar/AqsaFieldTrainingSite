@@ -533,14 +533,11 @@ const SUPERVISOR_GROUP_BY_ID = Object.freeze({
   7: 'العلاج الوظيفي',
   8: 'العلاج الوظيفي',
   9: 'علوم التربية البدنية',
-  10: 'العلوم الإدارية',
-  11: 'العلوم الإدارية',
   12: 'العلوم التكنولوجية',
   13: 'العلوم الإدارية',
   14: 'العلوم التكنولوجية',
   15: 'العلوم التكنولوجية',
-  16: 'العلوم التربوية',
-  17: 'العلوم الإدارية'
+  16: 'العلوم التربوية'
 });
 function supervisorGroupForRecord(s){
  return SUPERVISOR_GROUP_BY_ID[Number(s?.supervisor_id??s?.id)]||null;
@@ -1667,7 +1664,7 @@ async function loadSupervisorForms(){
  }
  const specById=new Map(specs.map(x=>[String(x.id),x.name]));
  const studentOptions=profiles.map(p=>'<option value="'+esc(p.user_id)+'" data-specialty="'+esc(specById.get(String(p.specialty_id))||'')+'">'+esc((p.full_name||'طالب')+' — '+(p.university_number||'بدون رقم'))+'</option>').join('');
- r.innerHTML='<div class="card"><h3>نماذج تقييم التدريب الميداني</h3><p class="muted">الفصل الدراسي: <strong>'+esc(activeSemester.semester_name||semesterCode)+'</strong>. اختر الطالب ونوع النموذج، ثم احفظ الدرجة في سجل تقييم هذا الفصل.</p><div class="form-grid"><label>الطالب<select id="sfStudent" required><option value="">اختر الطالب المسند إليك</option>'+studentOptions+'</select></label><label>التخصص<select id="sfSpecialty" required><option value="">اختر التخصص</option>'+specs.map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join('')+'</select></label><label>نوع النموذج<select id="sfType"><option value="supervisor">تقييم المشرف للطالب</option><option value="portfolio">تقييم ملف الإنجاز</option><option value="institution">تقييم المؤسسة / مدير المؤسسة</option><option value="signature">تقييم كشف التوقيعات</option></select></label></div><div id="sfFormArea"></div></div>';
+ r.innerHTML='<div class="card"><h3>نماذج تقييم التدريب الميداني</h3><p class="muted">الفصل الدراسي: <strong>'+esc(activeSemester.semester_name||semesterCode)+'</strong>. اختر الطالب ونوع النموذج، ثم احفظ الدرجة في سجل تقييم هذا الفصل.</p><div class="form-grid"><label>الطالب<select id="sfStudent" required><option value="">اختر الطالب المسند إليك</option>'+studentOptions+'</select></label><label>التخصص<select id="sfSpecialty" required disabled><option value="">اختر التخصص</option>'+specs.map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join('')+'</select></label><label>نوع النموذج<select id="sfType"><option value="supervisor">تقييم المشرف للطالب</option><option value="portfolio">تقييم ملف الإنجاز</option><option value="institution">تقييم المؤسسة / مدير المؤسسة</option><option value="signature">تقييم كشف التوقيعات</option></select></label></div><div id="sfFormArea"></div></div>';
  const student=$('sfStudent'),specialty=$('sfSpecialty'),type=$('sfType');
  student.onchange=()=>{const opt=student.options[student.selectedIndex];if(opt?.dataset.specialty)specialty.value=opt.dataset.specialty;renderForm()};
  specialty.onchange=renderForm;type.onchange=renderForm;
