@@ -40,6 +40,11 @@ update public.student_roster_supervisor_map
 set default_supervisor_id=13,updated_at=now()
 where default_supervisor_id in (10,11,17);
 
+-- Child education roster rows naming an unlisted supervisor are aligned to the approved active child-education supervisor.
+update public.student_roster_supervisor_map
+set default_supervisor_id=16,mapping_status='mapped',updated_at=now()
+where mapping_status='unmapped' and source_supervisor_name ilike '%الاء%';
+
 create table if not exists public.student_assignment_audit (
  id bigserial primary key,
  student_user_id uuid not null references auth.users(id) on delete cascade,
