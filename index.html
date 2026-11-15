@@ -523,12 +523,36 @@ const supervisorSeed=[
  {"name":"أ. أحمد الحسنات","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
  {"name":"د. أحمد دوابة","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"}
 ];
+const SUPERVISOR_GROUP_BY_ID = Object.freeze({
+  1: 'العلوم التكنولوجية',
+  2: 'العلوم التكنولوجية',
+  3: 'العلاج الوظيفي',
+  4: 'العلوم التكنولوجية',
+  5: 'العلوم الإعلامية',
+  6: 'العلوم الإعلامية',
+  7: 'العلاج الوظيفي',
+  8: 'العلاج الوظيفي',
+  9: 'علوم التربية البدنية',
+  10: 'العلوم الإدارية',
+  11: 'العلوم الإدارية',
+  12: 'العلوم التكنولوجية',
+  13: 'العلوم الإدارية',
+  14: 'العلوم التكنولوجية',
+  15: 'العلوم التكنولوجية',
+  16: 'العلوم التربوية',
+  17: 'العلوم الإدارية'
+});
+function supervisorGroupForRecord(s){
+ return SUPERVISOR_GROUP_BY_ID[Number(s?.supervisor_id??s?.id)]||null;
+}
 async function loadSupervisors(){
  if(!sb){currentSupervisorRecords=[];renderSupervisorRows([]);updateSignupSupervisorOptions();return}
  const {data:{session}}=await sb.auth.getSession();
  const columns=session?.user?'id,name,region,category,specialty,is_active,phone':'id,name,region,category,specialty,is_active';
  const {data,error}=await sb.from('public_supervisors').select(columns).eq('is_active',true).order('name');
- currentSupervisorRecords=!error&&Array.isArray(data)?data.filter(x=>x.is_active!==false):[];
+ currentSupervisorRecords=!error&&Array.isArray(data)
+  ?data.filter(x=>x.is_active!==false).map(x=>({...x,supervisor_group:supervisorGroupForRecord(x)}))
+  :[];
  renderSupervisorRows(currentSupervisorRecords);
  updateSignupSupervisorOptions();
 }
@@ -581,7 +605,7 @@ function updateSignupSupervisorOptions(){
  if(!area||!specialtyEl?.value||!gender){
   el.innerHTML='<option value="">أدخل الرقم الجامعي واختر المنطقة والتخصص أولًا</option>';el.disabled=true;return;
  }
- const matches=currentSupervisorRecords.filter(s=>s.id!=null&&signupRegionMatches(area,s.region)&&signupCategoryMatches(gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty));
+ const matches=currentSupervisorRecords.filter(s=>s.id!=null&&signupRegionMatches(area,s.region)&&signupCategoryMatches(gender,s.category)&&signupSpecialtyMatches(specialtyName,supervisorGroupForRecord(s)));
  if(!matches.length){
   el.innerHTML='<option value="">لا يوجد مشرف مطابق حاليًا؛ راجع القسم</option>';el.disabled=true;return;
  }
@@ -593,8 +617,8 @@ function renderSupervisorRows(rows){
  const list=[...(rows||[])];
  const target=$('supervisorsList');if(!target)return;
  if(!list.length){target.innerHTML='<p class="muted">تعذر تحميل قائمة المشرفين المعتمدة حاليًا. لن تظهر أسماء احتياطية؛ يرجى المحاولة لاحقًا أو التواصل مع القسم.</p>';return}
- target.innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>التخصص</th><th>المنطقة / مكان الإشراف</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+
- list.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.role||'مشرف التدريب الميداني')+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.region)+'</td><td>'+esc(x.category)+'</td><td>'+(x.phone?'<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>':'—')+'</td></tr>').join('')+
+ target.innerHTML='<div class="tablewrap"><table><thead><tr><th>اسم المشرف</th><th>المسمى الوظيفي</th><th>المؤهل الأكاديمي</th><th>مجموعة الإشراف</th><th>المنطقة / مكان الإشراف</th><th>فئة الإشراف</th><th>رقم الجوال</th></tr></thead><tbody>'+
+ list.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.role||'مشرف التدريب الميداني')+'</td><td>'+esc(x.specialty)+'</td><td>'+esc(x.supervisor_group||'غير محدد — يحتاج اعتماد القسم')+'</td><td>'+esc(x.region)+'</td><td>'+esc(x.category)+'</td><td>'+(x.phone?'<a href="tel:'+esc(x.phone)+'">'+esc(x.phone)+'</a>':'—')+'</td></tr>').join('')+
  '</tbody></table></div>';
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -1129,7 +1153,7 @@ async function loadAssignmentManager(){
     return;
    }
    const specialtyName=specMap.get(String(student.specialty_id))||'';
-   const matches=staff.filter(s=>signupRegionMatches(student.student_area,s.region)&&signupCategoryMatches(student.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty));
+   const matches=staff.filter(s=>signupRegionMatches(student.student_area,s.region)&&signupCategoryMatches(student.gender,s.category)&&signupSpecialtyMatches(specialtyName,supervisorGroupForRecord(s)));
    assignSupervisorSelect.innerHTML=matches.length?'<option value="">اختر المشرف المطابق</option>'+matches.map(s=>'<option value="'+esc(s.user_id)+'">'+esc(s.full_name+' — '+s.region)+'</option>').join(''):'<option value="">لا يوجد مشرف نشط مطابق للمنطقة والتخصص والفئة</option>';
    assignSupervisorSelect.disabled=!matches.length;
    assignSubmitButton.disabled=!matches.length;
@@ -1784,7 +1808,7 @@ async function loadStudentRegistrations(){
   const specialtyName=specialties.get(String(p.specialty_id))||'';
   const rosterMatches=!!roster&&roster.is_active===true&&roster.gender===p.gender&&(roster.specialty_id==null||String(roster.specialty_id)===String(p.specialty_id));
   const rosterLabel=!roster?'الرقم غير موجود في الكشف':!roster.is_active?'الرقم غير نشط في الكشف':!rosterMatches?'بيانات الفئة/التخصص لا تطابق الكشف':'مطابق ونشط';
-  const suitable=supervisors.filter(s=>s.is_active!==false&&signupCategoryMatches(p.gender,s.category)&&signupSpecialtyMatches(specialtyName,s.specialty)&&(!p.student_area||signupRegionMatches(p.student_area,s.region)));
+  const suitable=supervisors.filter(s=>s.is_active!==false&&signupCategoryMatches(p.gender,s.category)&&signupSpecialtyMatches(specialtyName,supervisorGroupForRecord(s))&&(!p.student_area||signupRegionMatches(p.student_area,s.region)));
   const options='<option value="">'+(p.supervisor_name?'اختر لتغيير المشرف':'اختر المشرف المناسب')+'</option>'+suitable.map(s=>'<option value="'+s.id+'" '+(p.supervisor_name===s.name?'selected':'')+'>'+esc(s.name)+' — '+esc(s.region||'منطقة غير محددة')+'</option>').join('');
   const supervisorCell='<div class="field" style="min-width:230px"><select id="supervisorChoice_'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>'+options+'</select><div class="muted small">'+(p.supervisor_name?'المحفوظ حاليًا: '+esc(p.supervisor_name):suitable.length?'لم يُحفظ مشرف بعد':'لا يوجد مشرف نشط مطابق للتخصص والفئة والمنطقة')+'</div><button class="btn gold" type="button" data-save-supervisor="'+esc(p.user_id)+'" '+(status==='pending'&&suitable.length?'':'disabled')+'>حفظ اختيار المشرف</button></div>';
   const actions=status==='pending'
