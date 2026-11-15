@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
     const [{ data: roster, error: rosterError }, { data: specialty, error: specialtyError }, { data: supervisor, error: supervisorError }, { data: existingProfile, error: existingError }] = await Promise.all([
       admin.from("eligible_student_roster").select("university_number,full_name,gender,specialty_id,is_active").eq("university_number", number).maybeSingle(),
       admin.from("specialties").select("id,name,is_active").eq("id", specialtyId).maybeSingle(),
-      admin.from("public_supervisors").select("id,name,region,category,specialty,phone,is_active").eq("id", supervisorId).maybeSingle(),
+      admin.from("public_supervisors").select("id,name,region,category,specialty,supervisor_group,phone,is_active").eq("id", supervisorId).maybeSingle(),
       admin.from("student_profiles").select("user_id").eq("university_number", number).maybeSingle(),
     ]);
     if (rosterError || specialtyError || supervisorError || existingError) {
@@ -172,12 +172,13 @@ Deno.serve(async (req: Request) => {
     if (!specialty || specialty.is_active === false) return reply({ error: "التخصص المختار غير مفعّل." }, 400);
     const administrativeSpecialties = ["إدارة الأعمال", "السكرتاريا الدولية", "العلوم المالية والمصرفية"];
     const isAdministrativeSpecialty = administrativeSpecialties.some(name => norm(name) === norm(specialty.name || ""));
-    const isAdministrativeSupervisor = Number(supervisor?.id) === 13;
+    const supervisorGroup = String(supervisor?.supervisor_group || "").trim();
+    const isAdministrativeSupervisor = norm(supervisorGroup) === norm("العلوم الإدارية");
     if (!supervisor || supervisor.is_active === false ||
         (isAdministrativeSpecialty && !isAdministrativeSupervisor) ||
         !regionMatches(area, supervisor.region) ||
         !categoryMatches(gender, supervisor.category) ||
-        !specialtyMatches(specialty.name || "", (isAdministrativeSupervisor ? "العلوم الإدارية" : supervisor.specialty || ""))) {
+        !specialtyMatches(specialty.name || "", supervisorGroup || supervisor.specialty || "")) {
       return reply({ error: "المشرف المختار لا يطابق المنطقة أو التخصص أو فئة الطالب. اختر المشرف المعتمد للمجموعة." }, 400);
     }
 
