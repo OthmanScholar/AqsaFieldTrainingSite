@@ -1086,7 +1086,8 @@ if(ownPasswordForm) ownPasswordForm.onsubmit=async function(e){
 
 async function loadAssignmentManager(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('هذه الوظيفة لرئيس القسم والإدارة فقط.','error');return}
- const r=$('staffResults');r.innerHTML='<div class="card"><h3>إدارة توزيع الطلاب على المشرفين</h3><p class="muted">اختر طالبًا مؤهلًا ومشرفًا لديه حساب وظيفي نشط، ثم اعتمد الإسناد. يعتمد الحفظ على صلاحيات قاعدة البيانات ودالة assign_training_supervisor.</p><div id="assignmentManagerBody">جارٍ تحميل البيانات...</div></div>';
+ const root=$('staffResults');
+ root.innerHTML='<div class="card"><h3>إدارة توزيع الطلاب على المشرفين</h3><p class="muted">ابحث عن المشرف أولًا، ثم اعرض طلابه المسندين. لإضافة طالب اختره من قائمة الطلاب المؤهلين؛ وعند الإزالة يُحذف التكليف فقط ولا يُحذف حساب الطالب أو سجله.</p><div id="assignmentManagerBody">جارٍ تحميل البيانات...</div></div>';
  const body=$('assignmentManagerBody');
  try{
   const [studentsResult,supervisorDirectoryResult,specsResult,entitiesResult,assignResult]=await Promise.all([
@@ -1094,78 +1095,95 @@ async function loadAssignmentManager(){
    sb.from('public_supervisors').select('id,name,user_id,phone,region,category,specialty,supervisor_group,is_active').eq('is_active',true).not('user_id','is',null).order('name').limit(500),
    sb.from('specialties').select('id,name').eq('is_active',true).order('name'),
    sb.from('training_entities').select('id,name').eq('is_active',true).order('name').limit(1000),
-   sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').limit(5000)
+   sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id,semester_code').limit(5000)
   ]);
   const err=studentsResult.error||supervisorDirectoryResult.error||specsResult.error||entitiesResult.error||assignResult.error;
   if(err)throw err;
-  const supervisorDirectory=supervisorDirectoryResult.data||[];
-  const linkedIds=supervisorDirectory.map(x=>x.user_id).filter(Boolean);
-  const rolesResult=linkedIds.length
-   ? await sb.from('user_roles').select('user_id,role,is_active').in('user_id',linkedIds).eq('role','supervisor').eq('is_active',true)
-   : {data:[],error:null};
+  const directory=supervisorDirectoryResult.data||[];
+  const linkedIds=directory.map(x=>x.user_id).filter(Boolean);
+  const rolesResult=linkedIds.length?await sb.from('user_roles').select('user_id,role,is_active').in('user_id',linkedIds).eq('role','supervisor').eq('is_active',true):{data:[],error:null};
   if(rolesResult.error)throw rolesResult.error;
   const activeRoleIds=new Set((rolesResult.data||[]).map(x=>x.user_id));
-  const staff=supervisorDirectory.filter(x=>activeRoleIds.has(x.user_id)).map(x=>({
-   user_id:x.user_id,full_name:x.name,staff_number:'حساب نشط',staff_type:'supervisor',is_active:x.is_active,
-   region:x.region,category:x.category,specialty:x.specialty,supervisor_group:x.supervisor_group,supervisor_id:x.id
-  }));
+  const staff=directory.filter(x=>activeRoleIds.has(x.user_id)).map(x=>({user_id:x.user_id,full_name:x.name,region:x.region,category:x.category,specialty:x.specialty,supervisor_group:x.supervisor_group,supervisor_id:x.id}));
   const students=studentsResult.data||[],specs=specsResult.data||[],entities=entitiesResult.data||[],assignments=assignResult.data||[];
   const specMap=new Map(specs.map(x=>[String(x.id),x.name]));
   const entityMap=new Map(entities.map(x=>[String(x.id),x.name]));
   const staffMap=new Map(staff.map(x=>[x.user_id,x.full_name]));
   const studentMap=new Map(students.map(x=>[x.user_id,x]));
   const eligible=students.filter(x=>x.specialty_id&&((x.eligibility_status==='approved'&&Number(x.completed_hours||0)>=36)||x.eligibility_status==='exception_approved'));
-  const pendingStudents=students.filter(x=>!eligible.some(e=>e.user_id===x.user_id));
-  const eligibilityLabel=status=>status==='approved'?'معتمد':status==='exception_approved'?'معتمد باستثناء مسبب':status==='rejected'?'مرفوض':'قيد المراجعة';
+  const assignedStudentIds=new Set(assignments.map(a=>a.student_user_id));
   const activeAssignments=assignments.filter(a=>staffMap.has(a.supervisor_user_id));
-  body.innerHTML='<p><strong>الطلاب المؤهلون:</strong> '+eligible.length+' — <strong>حسابات المشرفين النشطة المرتبطة:</strong> '+staff.length+' — <strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p>'+
-   (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة بدليل المشرفين حتى الآن. اربط الحسابات المعتمدة أولًا، ثم أعد تحميل إدارة التوزيع.</p>':'')+
-   '<form id="assignmentForm" class="form-grid"><label>الطالب المؤهل<select id="assignStudent" required><option value="">اختر الطالب</option>'+eligible.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name+' — '+x.university_number+' — '+(specMap.get(String(x.specialty_id))||'تخصص غير معروف'))+'</option>').join('')+'</select></label><label>المشرف المختص بتخصص الطالب<select id="assignSupervisor" required disabled><option value="">اختر الطالب أولًا</option></select><small id="assignSupervisorHint" class="muted">اختر الطالب أولًا؛ ستظهر هنا أسماء المشرفين المطابقين لتخصصه ومنطقته وفئته.</small></label><label>جهة التدريب<select id="assignEntity"><option value="">لم تُحدد بعد</option>'+entities.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')+'</select></label><div><button class="btn gold" type="submit" '+(!eligible.length||!staff.length?'disabled':'')+'>حفظ التكليف الرسمي</button></div></form>'+
-   '<h4>التكليفات الحالية</h4><div class="tablewrap"><table><thead><tr><th>الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>المشرف</th><th>جهة التدريب</th></tr></thead><tbody>'+
-   (activeAssignments.length?activeAssignments.map(a=>{const p=studentMap.get(a.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(a.specialty_id))||'—')+'</td><td>'+esc(staffMap.get(a.supervisor_user_id)||'—')+'</td><td>'+esc(entityMap.get(String(a.training_entity_id))||'لم تحدد')+'</td></tr>'}).join(''):'<tr><td colspan="5">لا توجد تكليفات مسجلة حاليًا.</td></tr>')+'</tbody></table></div>'+
-   '<h4>الطلاب المسجلون وحالة الأهلية</h4><p class="muted small">يظهر كل حساب طالب هنا للتوضيح. لا يمكن إسناد الطالب إلا بعد اعتماد إثبات 36 ساعة أو توثيق استثناء من القسم.</p>'+
-   (students.length?'<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>المشرف الحالي</th><th>جهة التدريب</th><th>الساعات المعتمدة</th><th>حالة الأهلية</th><th>سبب عدم ظهوره بقائمة التكليف</th></tr></thead><tbody>'+students.map(p=>{const isEligible=eligible.some(e=>e.user_id===p.user_id);const reason=isEligible?'مؤهل للتكليف':p.eligibility_status==='pending'?'لم يُعتمد إثبات الساعات بعد (36 ساعة مطلوبة)':p.eligibility_status==='rejected'?'تحتاج الحالة إلى مراجعة القسم':'بيانات الأهلية أو التخصص غير مكتملة';const assigned=assignments.find(a=>a.student_user_id===p.user_id);const selectedSupervisor=(p.supervisor_name||'').trim();const supervisorName=assigned?(staffMap.get(assigned.supervisor_user_id)||'حساب المشرف غير مرتبط'):selectedSupervisor?(selectedSupervisor+' — مختار عند التسجيل؛ ينتظر التكليف الرسمي'):'لم يُختر مشرف عند التسجيل';const entityName=assigned?(entityMap.get(String(assigned.training_entity_id))||'غير محددة'):'غير محددة';return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(p.specialty_id))||'—')+'</td><td>'+esc(supervisorName)+'</td><td>'+esc(entityName)+'</td><td>'+esc(p.completed_hours==null?'لم تُعتمد بعد':String(p.completed_hours))+'</td><td>'+esc(eligibilityLabel(p.eligibility_status))+'</td><td>'+esc(reason)+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="muted">لم تُنشأ حسابات طلاب بعد.</p>');
-  const assignStudentSelect=$('assignStudent'),assignSupervisorSelect=$('assignSupervisor'),assignSubmitButton=$('assignmentForm').querySelector('button[type="submit"]');
-  const assignSupervisorHint=$('assignSupervisorHint');
-  const updateAssignSupervisorOptions=()=>{
-   const student=eligible.find(x=>x.user_id===assignStudentSelect.value);
-   if(!student){
-    assignSupervisorSelect.innerHTML='<option value="">اختر الطالب أولًا</option>';
-    assignSupervisorSelect.disabled=true;
-    assignSubmitButton.disabled=true;
-    if(assignSupervisorHint)assignSupervisorHint.textContent='اختر الطالب أولًا؛ ستظهر هنا أسماء المشرفين المطابقين لتخصصه ومنطقته وفئته.';
-    return;
-   }
+  const eligibilityLabel=status=>status==='approved'?'معتمد':status==='exception_approved'?'معتمد باستثناء مسبب':status==='rejected'?'مرفوض':'قيد المراجعة';
+  const entityOptions='<option value="">لم تُحدد جهة التدريب بعد</option>'+entities.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+  body.innerHTML='<div class="stats-grid"><p><strong>حسابات المشرفين النشطة:</strong> '+staff.length+'</p><p><strong>الطلاب المؤهلون:</strong> '+eligible.length+'</p><p><strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p></div>'+
+   (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة بدليل المشرفين.</p>':'')+
+   '<div class="card" style="margin-top:16px"><h4>1. البحث عن المشرف</h4><div class="form-grid"><label>ابحث باسم المشرف<input id="assignmentSupervisorSearch" type="search" placeholder="اكتب اسم المشرف للبحث..."></label><label>اختر المشرف<select id="assignmentSupervisorSelect"><option value="">اختر المشرف</option>'+staff.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name)+'</option>').join('')+'</select></label></div><p id="assignmentSupervisorInfo" class="muted">اختر مشرفًا لعرض تخصصه/مجموعته وطلابه المسندين.</p></div>'+
+   '<div id="supervisorAssignmentWorkspace" class="card" style="margin-top:16px"><p class="muted">ستظهر هنا قائمة الطلاب بعد اختيار المشرف.</p></div>';
+  const search=$('assignmentSupervisorSearch'),supervisorSelect=$('assignmentSupervisorSelect'),workspace=$('supervisorAssignmentWorkspace'),info=$('assignmentSupervisorInfo');
+  const matchesSupervisor=(student,supervisor)=>{
    const specialtyName=specMap.get(String(student.specialty_id))||'';
-   const matches=staff.filter(s=>signupRegionMatches(student.student_area,s.region)&&signupCategoryMatches(student.gender,s.category)&&signupSpecialtyMatches(specialtyName,supervisorGroupForRecord(s)));
-   const groupName=matches.map(s=>supervisorGroupForRecord(s)).find(Boolean)||'';
-   if(assignSupervisorHint)assignSupervisorHint.textContent='تخصص الطالب: '+specialtyName+(groupName?' — المجموعة الإشرافية: '+groupName:'')+' — تظهر فقط الحسابات النشطة المطابقة للتخصص والمنطقة والفئة.';
-   assignSupervisorSelect.innerHTML=matches.length?'<option value="">اختر المشرف المختص</option>'+matches.map(s=>'<option value="'+esc(s.user_id)+'">'+esc(s.full_name+' — '+(supervisorGroupForRecord(s)||s.specialty||'التخصص غير محدد')+' — '+s.region+' — '+s.category)+'</option>').join(''):'<option value="">لا يوجد مشرف نشط مطابق للتخصص والمنطقة والفئة</option>';
-   assignSupervisorSelect.disabled=!matches.length;
-   assignSubmitButton.disabled=!matches.length;
+   return signupRegionMatches(student.student_area,supervisor.region)&&signupCategoryMatches(student.gender,supervisor.category)&&signupSpecialtyMatches(specialtyName,supervisorGroupForRecord(supervisor));
   };
-  assignStudentSelect.addEventListener('change',updateAssignSupervisorOptions);
-  updateAssignSupervisorOptions();
-  $('assignmentForm').onsubmit=async e=>{
-   e.preventDefault();const studentId=$('assignStudent').value,supervisorId=$('assignSupervisor').value,entityVal=$('assignEntity').value||null;
-   const student=eligible.find(x=>x.user_id===studentId);if(!student){showNotice('الطالب المختار غير مؤهل وفق بيانات النظام الحالية.','error');return}
-   const chosenSupervisor=staff.find(x=>x.user_id===supervisorId);
-   if(!chosenSupervisor){showNotice('اختر مشرفًا من القائمة المطابقة.','error');return}
-   const specialtyName=specMap.get(String(student.specialty_id))||'';
-   if(!signupRegionMatches(student.student_area,chosenSupervisor.region)||!signupCategoryMatches(student.gender,chosenSupervisor.category)||!signupSpecialtyMatches(specialtyName,chosenSupervisor.specialty)){
-    showNotice('المشرف لا يطابق تخصص الطالب أو فئته أو منطقته. اختر مشرفًا مطابقًا.','error');
-    updateAssignSupervisorOptions();
-    return;
-   }
-   if(assignments.some(a=>a.student_user_id===studentId)){const existing=assignments.find(a=>a.student_user_id===studentId);showNotice(existing.supervisor_user_id===supervisorId?'هذا الطالب مسند إلى المشرف نفسه بالفعل.':'الطالب مسند إلى مشرف آخر بالفعل. راجع سجل التكليفات قبل أي تغيير حتى لا يتكرر الإسناد.','error');return}
-   if(!confirm('تأكيد إسناد الطالب '+student.full_name+' إلى المشرف '+staffMap.get(supervisorId)+'؟'))return;
-   const btn=$('assignmentForm').querySelector('button[type="submit"]');btn.disabled=true;
-   try{const {data,error}=await sb.rpc('assign_training_supervisor',{p_supervisor_user_id:supervisorId,p_student_user_id:studentId,p_specialty_id:Number(student.specialty_id),p_training_entity_id:entityVal?Number(entityVal):null});if(error)throw error;showNotice('تم حفظ التكليف الرسمي. رقم التكليف: '+(data??'تم'),'success');await loadAssignmentManager()}
-   catch(err){showNotice('لم يتم تأكيد حفظ التكليف: '+(err.message||'تحقق من دالة التوزيع وصلاحيات قاعدة البيانات.'),'error');btn.disabled=false}
+  const renderSelectedSupervisor=()=>{
+   const supervisor=staff.find(x=>x.user_id===supervisorSelect.value);
+   if(!supervisor){info.textContent='اختر مشرفًا لعرض تخصصه/مجموعته وطلابه المسندين.';workspace.innerHTML='<p class="muted">ستظهر هنا قائمة الطلاب بعد اختيار المشرف.</p>';return}
+   const group=supervisorGroupForRecord(supervisor)||supervisor.specialty||'غير محددة';
+   info.textContent='المجموعة/التخصص الإشرافي: '+group+' — المنطقة: '+(supervisor.region||'غير محددة')+' — الفئة: '+(supervisor.category||'غير محددة');
+   const assigned=assignments.filter(a=>a.supervisor_user_id===supervisor.user_id);
+   const available=eligible.filter(p=>!assignedStudentIds.has(p.user_id)&&matchesSupervisor(p,supervisor));
+   workspace.innerHTML='<h4>2. الطلاب المسندون إلى '+esc(supervisor.full_name)+'</h4>'+
+    '<p><strong>عدد الطلاب المسندين:</strong> '+assigned.length+' — <strong>طلاب مؤهلون متاحون للإسناد:</strong> '+available.length+'</p>'+
+    '<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>الإجراء</th></tr></thead><tbody>'+
+    (assigned.length?assigned.map(a=>{const p=studentMap.get(a.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(a.specialty_id||p.specialty_id))||'—')+'</td><td>'+esc(entityMap.get(String(a.training_entity_id))||'لم تُحدد')+'</td><td><button type="button" class="btn danger small" data-remove-assignment="'+esc(a.id)+'">إزالة من قائمة المشرف</button></td></tr>'}).join(''):'<tr><td colspan="5">لا يوجد طلاب مسندون لهذا المشرف حتى الآن.</td></tr>')+
+    '</tbody></table></div>'+
+    '<div class="card" style="margin-top:16px"><h4>3. إضافة طالب إلى هذا المشرف</h4><p class="muted small">تظهر هنا فقط أسماء الطلاب المؤهلين غير المسندين إلى أي مشرف، والمتوافقين مع مجموعة هذا المشرف ومنطقته وفئته. يظهر تخصص كل طالب بجانب اسمه.</p>'+
+    '<form id="addStudentToSupervisorForm" class="form-grid"><label>الطالب والتخصص<select id="assignmentStudentToAdd" required><option value="">اختر الطالب</option>'+available.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.full_name+' — '+p.university_number+' — '+(specMap.get(String(p.specialty_id))||'تخصص غير معروف'))+'</option>').join('')+'</select></label><label>جهة التدريب<select id="assignmentEntityToAdd">'+entityOptions+'</select></label><div><button class="btn gold" type="submit" '+(!available.length?'disabled':'')+'>إسناد الطالب إلى هذا المشرف</button></div></form>'+
+    (!available.length?'<p class="muted">لا يوجد حاليًا طالب مؤهل وغير مسند يطابق هذا المشرف.</p>':'')+'</div>';
+   const addForm=$('addStudentToSupervisorForm');
+   addForm.onsubmit=async e=>{
+    e.preventDefault();
+    const studentId=$('assignmentStudentToAdd').value,entityVal=$('assignmentEntityToAdd').value||null;
+    const student=available.find(x=>x.user_id===studentId);
+    if(!student){showNotice('اختر طالبًا مؤهلًا من القائمة.','error');return}
+    if(!matchesSupervisor(student,supervisor)){showNotice('هذا الطالب لا يطابق مجموعة المشرف أو منطقته أو فئته.','error');return}
+    if(assignments.some(a=>a.student_user_id===studentId)){showNotice('الطالب مسند بالفعل إلى مشرف.','error');return}
+    if(!confirm('تأكيد إسناد '+student.full_name+' ('+student.university_number+') إلى '+supervisor.full_name+'؟'))return;
+    const btn=addForm.querySelector('button[type="submit"]');btn.disabled=true;
+    try{
+     const {data,error}=await sb.rpc('assign_training_supervisor',{p_supervisor_user_id:supervisor.user_id,p_student_user_id:student.user_id,p_specialty_id:Number(student.specialty_id),p_training_entity_id:entityVal?Number(entityVal):null});
+     if(error)throw error;
+     showNotice('تم إسناد الطالب بنجاح. رقم التكليف: '+(data??'تم'),'success');
+     await loadAssignmentManager();
+    }catch(err){showNotice('تعذر إسناد الطالب: '+(err.message||'تحقق من صلاحيات قاعدة البيانات.'),'error');btn.disabled=false}
+   };
   };
+  search.addEventListener('input',()=>{
+   const q=normalizeArabicMatch(search.value);
+   const selected=supervisorSelect.value;
+   const filtered=staff.filter(x=>normalizeArabicMatch(x.full_name).includes(q));
+   supervisorSelect.innerHTML='<option value="">اختر المشرف</option>'+filtered.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name)+'</option>').join('');
+   if(filtered.some(x=>x.user_id===selected))supervisorSelect.value=selected;
+   renderSelectedSupervisor();
+  });
+  supervisorSelect.addEventListener('change',renderSelectedSupervisor);
+  workspace.addEventListener('click',async e=>{
+   const btn=e.target.closest('[data-remove-assignment]');if(!btn)return;
+   const assignmentId=Number(btn.getAttribute('data-remove-assignment'));
+   const assignment=assignments.find(a=>Number(a.id)===assignmentId);
+   const student=assignment?studentMap.get(assignment.student_user_id):null;
+   if(!assignment){showNotice('لم يتم العثور على التكليف المطلوب. أعد تحميل القائمة.','error');return}
+   if(!confirm('هل تريد إزالة '+(student?.full_name||'هذا الطالب')+' من قائمة هذا المشرف؟ سيتم حذف سجل الإسناد فقط، ولن يُحذف حساب الطالب أو بياناته.'))return;
+   btn.disabled=true;
+   try{
+    const {data,error}=await sb.rpc('remove_training_supervisor_assignment',{p_assignment_id:assignmentId});
+    if(error)throw error;
+    if(data!==true)throw new Error('لم يتم العثور على التكليف أو أنه أزيل مسبقًا.');
+    showNotice('تمت إزالة الطالب من قائمة المشرف فقط، وبيانات الطالب ما زالت محفوظة.','success');
+    await loadAssignmentManager();
+   }catch(err){showNotice('تعذرت إزالة التكليف: '+(err.message||'تحقق من الصلاحيات.','error'));btn.disabled=false}
+  });
  }catch(err){body.innerHTML='<p class="notice show error">تعذر تحميل بيانات التوزيع: '+esc(err.message||'تحقق من الجداول والصلاحيات في Supabase.')+'</p>'}
 }
-
 async function renderSingleStudentEntry(){
  if(!['admin','department_head'].includes(currentRole)){showNotice('إضافة طالب للكشف متاحة لرئيس القسم والإدارة فقط.','error');return}
  const r=$('staffResults');
