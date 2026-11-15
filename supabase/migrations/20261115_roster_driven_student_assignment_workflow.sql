@@ -35,6 +35,11 @@ on conflict(university_number) do update set
  mapping_status=excluded.mapping_status,
  updated_at=now();
 
+-- Administrative sciences are handled by one designated supervisor across all three specialties.
+update public.student_roster_supervisor_map
+set default_supervisor_id=13,updated_at=now()
+where default_supervisor_id in (10,11,17);
+
 create table if not exists public.student_assignment_audit (
  id bigserial primary key,
  student_user_id uuid not null references auth.users(id) on delete cascade,
