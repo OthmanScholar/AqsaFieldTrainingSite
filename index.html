@@ -161,6 +161,40 @@ body.supervisor-mode .home-hub{display:none!important}
 .announcement-status.off{background:#f6e8e5;color:#994c3e}
 @media(max-width:600px){.announcement-ticker{gap:8px;padding:7px 10px}.ticker-label{font-size:.82rem}.ticker-item{font-size:.82rem}.announcement-row{flex-direction:column}}
 
+
+/* Supervisor-first assignment workspace: polished administrative UI */
+#assignmentManagerBody{display:grid;gap:20px;color:#20364d}
+#assignmentManagerBody .assignment-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 2px}
+#assignmentManagerBody .assignment-stats p{margin:0;padding:15px 17px;border:1px solid #dbe6f1;border-radius:15px;background:linear-gradient(145deg,#fff,#f3f7fc);color:#61758a;box-shadow:0 5px 16px #173f6609}
+#assignmentManagerBody .assignment-stats strong{display:block;color:#174574;font-size:1.02rem;margin-bottom:3px}
+#assignmentManagerBody .assignment-search-card,#assignmentManagerBody .assignment-workspace,#assignmentManagerBody .assignment-add-card{background:#fff;border:1px solid #dce6f0;border-radius:20px;padding:clamp(17px,2.4vw,25px);box-shadow:0 9px 25px #12365d0d}
+#assignmentManagerBody .assignment-search-card{border-top:4px solid #d8b46a}
+#assignmentManagerBody .assignment-section-heading{display:flex;align-items:center;gap:13px;margin:0 0 18px}
+#assignmentManagerBody .assignment-section-heading h4{margin:0;color:#174574;font-size:1.12rem}
+#assignmentManagerBody .assignment-section-heading p{margin:3px 0 0;color:#75879a;font-size:.88rem}
+#assignmentManagerBody .assignment-step{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:13px;background:#eaf1f8;color:#245b91;font-weight:900;font-size:.95rem}
+#assignmentManagerBody .assignment-filter-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(250px,1.2fr);gap:15px;align-items:end}
+#assignmentManagerBody label{display:flex;flex-direction:column;gap:7px;color:#34516e;font-weight:800;font-size:.91rem;min-width:0}
+#assignmentManagerBody input,#assignmentManagerBody select{width:100%;min-width:0;min-height:48px;padding:10px 13px;border:1px solid #cfdce9;border-radius:12px;background:#f8fbfe;color:#1e3d5d;outline:none;transition:border-color .18s,box-shadow .18s}
+#assignmentManagerBody input:focus,#assignmentManagerBody select:focus{border-color:#4c83b4;box-shadow:0 0 0 3px #4c83b420}
+#assignmentSupervisorInfo{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:#f1f6fb;color:#45627e;line-height:1.8}
+#assignmentManagerBody .assignment-workspace{min-height:150px}
+#assignmentManagerBody .assignment-workspace>h4{margin:0 0 8px;color:#174574;font-size:1.12rem}
+#assignmentManagerBody .assignment-workspace>p{color:#647b91;line-height:1.8}
+#assignmentManagerBody .assignment-workspace .tablewrap{margin:14px 0 20px;border:1px solid #e1e9f1;border-radius:14px}
+#assignmentManagerBody table{min-width:700px;border-collapse:separate;border-spacing:0;overflow:hidden}
+#assignmentManagerBody th{background:#edf3f9;color:#174574;font-size:.88rem;padding:13px 15px;border-bottom:1px solid #dbe5ef}
+#assignmentManagerBody td{padding:13px 15px;color:#3d5268;border-bottom:1px solid #edf1f5;vertical-align:middle}
+#assignmentManagerBody tbody tr:last-child td{border-bottom:0}
+#assignmentManagerBody tbody tr:hover td{background:#f8fbfe}
+#assignmentManagerBody .assignment-add-card{background:linear-gradient(145deg,#f9fbfd,#f1f6fb);border-style:dashed;border-color:#c9d9e8;box-shadow:none}
+#assignmentManagerBody .assignment-add-card form{display:grid;grid-template-columns:minmax(250px,1.5fr) minmax(210px,1fr) auto;gap:13px;align-items:end}
+#assignmentManagerBody .assignment-add-card .btn{min-height:48px;padding:10px 19px;border-radius:12px;background:#245b91;color:#fff;white-space:nowrap;box-shadow:0 5px 12px #245b9122}
+#assignmentManagerBody .assignment-add-card .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#assignmentManagerBody .btn.danger{background:#fff0f0;color:#a33b43;border:1px solid #f0c8ca;padding:7px 12px;border-radius:10px}
+#assignmentManagerBody .btn.danger:hover{background:#ffe2e3}
+@media(max-width:760px){#assignmentManagerBody .assignment-stats{grid-template-columns:1fr}#assignmentManagerBody .assignment-filter-grid,#assignmentManagerBody .assignment-add-card form{grid-template-columns:1fr}#assignmentManagerBody .assignment-add-card .btn{width:100%}}
+
 </style>
 </head>
 <body>
@@ -1115,10 +1149,10 @@ async function loadAssignmentManager(){
   const activeAssignments=assignments.filter(a=>staffMap.has(a.supervisor_user_id));
   const eligibilityLabel=status=>status==='approved'?'معتمد':status==='exception_approved'?'معتمد باستثناء مسبب':status==='rejected'?'مرفوض':'قيد المراجعة';
   const entityOptions='<option value="">لم تُحدد جهة التدريب بعد</option>'+entities.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
-  body.innerHTML='<div class="stats-grid"><p><strong>حسابات المشرفين النشطة:</strong> '+staff.length+'</p><p><strong>الطلاب المؤهلون:</strong> '+eligible.length+'</p><p><strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p></div>'+
+  body.innerHTML='<div class="assignment-stats"><p><strong>حسابات المشرفين النشطة:</strong> '+staff.length+'</p><p><strong>الطلاب المؤهلون:</strong> '+eligible.length+'</p><p><strong>التكليفات الحالية:</strong> '+activeAssignments.length+'</p></div>'+
    (!staff.length?'<p class="notice show error">لا توجد حسابات مشرفين نشطة مرتبطة بدليل المشرفين.</p>':'')+
-   '<div class="card" style="margin-top:16px"><h4>1. البحث عن المشرف</h4><div class="form-grid"><label>ابحث باسم المشرف<input id="assignmentSupervisorSearch" type="search" placeholder="اكتب اسم المشرف للبحث..."></label><label>اختر المشرف<select id="assignmentSupervisorSelect"><option value="">اختر المشرف</option>'+staff.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name)+'</option>').join('')+'</select></label></div><p id="assignmentSupervisorInfo" class="muted">اختر مشرفًا لعرض تخصصه/مجموعته وطلابه المسندين.</p></div>'+
-   '<div id="supervisorAssignmentWorkspace" class="card" style="margin-top:16px"><p class="muted">ستظهر هنا قائمة الطلاب بعد اختيار المشرف.</p></div>';
+   '<div class="assignment-search-card"><div class="assignment-section-heading"><span class="assignment-step">01</span><div><h4>اختيار المشرف</h4><p>ابحث بالاسم ثم اختر المشرف لعرض طلابه.</p></div></div><div class="assignment-filter-grid"><label>ابحث باسم المشرف<input id="assignmentSupervisorSearch" type="search" placeholder="اكتب اسم المشرف للبحث..."></label><label>اختر المشرف<select id="assignmentSupervisorSelect"><option value="">اختر المشرف</option>'+staff.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name)+'</option>').join('')+'</select></label></div><p id="assignmentSupervisorInfo" class="muted">اختر مشرفًا لعرض تخصصه/مجموعته وطلابه المسندين.</p></div>'+
+   '<div id="supervisorAssignmentWorkspace" class="assignment-workspace"><p class="muted">ستظهر هنا قائمة الطلاب بعد اختيار المشرف.</p></div>';
   const search=$('assignmentSupervisorSearch'),supervisorSelect=$('assignmentSupervisorSelect'),workspace=$('supervisorAssignmentWorkspace'),info=$('assignmentSupervisorInfo');
   const matchesSupervisor=(student,supervisor)=>{
    const specialtyName=specMap.get(String(student.specialty_id))||'';
@@ -1136,7 +1170,7 @@ async function loadAssignmentManager(){
     '<div class="tablewrap"><table><thead><tr><th>اسم الطالب</th><th>الرقم الجامعي</th><th>التخصص</th><th>جهة التدريب</th><th>الإجراء</th></tr></thead><tbody>'+
     (assigned.length?assigned.map(a=>{const p=studentMap.get(a.student_user_id)||{};return '<tr><td>'+esc(p.full_name||'—')+'</td><td>'+esc(p.university_number||'—')+'</td><td>'+esc(specMap.get(String(a.specialty_id||p.specialty_id))||'—')+'</td><td>'+esc(entityMap.get(String(a.training_entity_id))||'لم تُحدد')+'</td><td><button type="button" class="btn danger small" data-remove-assignment="'+esc(a.id)+'">إزالة من قائمة المشرف</button></td></tr>'}).join(''):'<tr><td colspan="5">لا يوجد طلاب مسندون لهذا المشرف حتى الآن.</td></tr>')+
     '</tbody></table></div>'+
-    '<div class="card" style="margin-top:16px"><h4>3. إضافة طالب إلى هذا المشرف</h4><p class="muted small">تظهر هنا فقط أسماء الطلاب المؤهلين غير المسندين إلى أي مشرف، والمتوافقين مع مجموعة هذا المشرف ومنطقته وفئته. يظهر تخصص كل طالب بجانب اسمه.</p>'+
+    '<div class="assignment-add-card"><div class="assignment-section-heading"><span class="assignment-step">03</span><div><h4>إضافة طالب للمشرف</h4><p>اختر طالبًا مؤهلًا وغير مسند.</p></div></div><p class="muted small">تظهر هنا فقط أسماء الطلاب المؤهلين غير المسندين إلى أي مشرف، والمتوافقين مع مجموعة هذا المشرف ومنطقته وفئته. يظهر تخصص كل طالب بجانب اسمه.</p>'+
     '<form id="addStudentToSupervisorForm" class="form-grid"><label>الطالب والتخصص<select id="assignmentStudentToAdd" required><option value="">اختر الطالب</option>'+available.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.full_name+' — '+p.university_number+' — '+(specMap.get(String(p.specialty_id))||'تخصص غير معروف'))+'</option>').join('')+'</select></label><label>جهة التدريب<select id="assignmentEntityToAdd">'+entityOptions+'</select></label><div><button class="btn gold" type="submit" '+(!available.length?'disabled':'')+'>إسناد الطالب إلى هذا المشرف</button></div></form>'+
     (!available.length?'<p class="muted">لا يوجد حاليًا طالب مؤهل وغير مسند يطابق هذا المشرف.</p>':'')+'</div>';
    const addForm=$('addStudentToSupervisorForm');
