@@ -1581,7 +1581,9 @@ async function loadSupervisorVisitEntry(){
 async function loadAssigned(){
  const r=$('staffResults');r.innerHTML='<p>جارٍ تحميل الطلاب والتكليفات...</p>';
  if(currentRole==='supervisor'){await loadSupervisorAssignedView(r);return}
- let q=sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').limit(500);
+ const {data:activeSemester,error:semesterError}=await sb.from('academic_semesters').select('semester_code,semester_name').eq('is_active',true).maybeSingle();
+ if(semesterError||!activeSemester){r.innerHTML='<p class="notice show error">لا يوجد فصل دراسي نشط لعرض التكليفات.</p>';return}
+ let q=sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id,semester_code').eq('semester_code',activeSemester.semester_code).limit(1000);
  const {data,error}=await q;
  if(error){r.textContent='تعذر تحميل التكليفات: '+error.message;return}
  const assignments=data||[];
