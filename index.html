@@ -523,29 +523,13 @@ const supervisorSeed=[
  {"name":"أ. أحمد الحسنات","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"},
  {"name":"د. أحمد دوابة","region":"جميع المناطق","category":"طلاب","specialty":"العلوم التكنولوجية"}
 ];
-const SUPERVISOR_GROUP_BY_ID = Object.freeze({
-  1: 'العلوم التكنولوجية',
-  2: 'العلوم التكنولوجية',
-  3: 'العلاج الوظيفي',
-  4: 'العلوم التكنولوجية',
-  5: 'العلوم الإعلامية',
-  6: 'العلوم الإعلامية',
-  7: 'العلاج الوظيفي',
-  8: 'العلاج الوظيفي',
-  9: 'علوم التربية البدنية',
-  12: 'العلوم التكنولوجية',
-  13: 'العلوم الإدارية',
-  14: 'العلوم التكنولوجية',
-  15: 'العلوم التكنولوجية',
-  16: 'العلوم التربوية'
-});
 function supervisorGroupForRecord(s){
- return SUPERVISOR_GROUP_BY_ID[Number(s?.supervisor_id??s?.id)]||null;
+ return String(s?.supervisor_group||'').trim()||null;
 }
 async function loadSupervisors(){
  if(!sb){currentSupervisorRecords=[];renderSupervisorRows([]);updateSignupSupervisorOptions();return}
  const {data:{session}}=await sb.auth.getSession();
- const columns=session?.user?'id,name,region,category,specialty,is_active,phone':'id,name,region,category,specialty,is_active';
+ const columns=session?.user?'id,name,region,category,specialty,supervisor_group,is_active,phone':'id,name,region,category,specialty,supervisor_group,is_active';
  const {data,error}=await sb.from('public_supervisors').select(columns).eq('is_active',true).order('name');
  currentSupervisorRecords=!error&&Array.isArray(data)
   ?data.filter(x=>x.is_active!==false).map(x=>({...x,supervisor_group:supervisorGroupForRecord(x)}))
@@ -1107,7 +1091,7 @@ async function loadAssignmentManager(){
  try{
   const [studentsResult,supervisorDirectoryResult,specsResult,entitiesResult,assignResult]=await Promise.all([
    sb.from('student_profiles').select('user_id,full_name,university_number,gender,specialty_id,completed_hours,eligibility_status,student_area,supervisor_name,supervisor_phone').order('full_name').limit(2000),
-   sb.from('public_supervisors').select('id,name,user_id,phone,region,category,specialty,is_active').eq('is_active',true).not('user_id','is',null).order('name').limit(500),
+   sb.from('public_supervisors').select('id,name,user_id,phone,region,category,specialty,supervisor_group,is_active').eq('is_active',true).not('user_id','is',null).order('name').limit(500),
    sb.from('specialties').select('id,name').eq('is_active',true).order('name'),
    sb.from('training_entities').select('id,name').eq('is_active',true).order('name').limit(1000),
    sb.from('supervisor_assignments').select('id,student_user_id,supervisor_user_id,specialty_id,training_entity_id').limit(5000)
@@ -1123,7 +1107,7 @@ async function loadAssignmentManager(){
   const activeRoleIds=new Set((rolesResult.data||[]).map(x=>x.user_id));
   const staff=supervisorDirectory.filter(x=>activeRoleIds.has(x.user_id)).map(x=>({
    user_id:x.user_id,full_name:x.name,staff_number:'حساب نشط',staff_type:'supervisor',is_active:x.is_active,
-   region:x.region,category:x.category,specialty:x.specialty,supervisor_id:x.id
+   region:x.region,category:x.category,specialty:x.specialty,supervisor_group:x.supervisor_group,supervisor_id:x.id
   }));
   const students=studentsResult.data||[],specs=specsResult.data||[],entities=entitiesResult.data||[],assignments=assignResult.data||[];
   const specMap=new Map(specs.map(x=>[String(x.id),x.name]));
