@@ -143,22 +143,19 @@ Deno.serve(async (req: Request) => {
     const phone = String(body?.phone || "").trim();
     const area = String(body?.student_area || "").trim();
     const specialtyId = Number(body?.specialty_id);
-    const supervisorId = Number(body?.supervisor_id);
     const password = String(body?.password || "");
 
-    if (!phone || !area || !Number.isInteger(specialtyId) || specialtyId <= 0 ||
-        !Number.isInteger(supervisorId) || supervisorId <= 0 || !password) {
-      return reply({ error: "أكمل جميع بيانات التسجيل واختر التخصص والمشرف." }, 400);
+    if (!phone || !area || !Number.isInteger(specialtyId) || specialtyId <= 0 || !password) {
+      return reply({ error: "أكمل رقم الجوال ومنطقة التدريب والتخصص وكلمة المرور." }, 400);
     }
     if (!/^(122|222|220)\d{2,}$/.test(number)) return reply({ error: "تحقق من الرقم الجامعي؛ 122 للطلاب و222 أو 220 للطالبات." }, 400);
     if (password.length < 8) return reply({ error: "كلمة المرور يجب ألا تقل عن 8 أحرف." }, 400);
     if (phone.length < 8 || phone.length > 20) return reply({ error: "تحقق من رقم الجوال." }, 400);
 
     const gender = number.startsWith("122") ? "male" : "female";
-    const [{ data: roster, error: rosterError }, { data: specialty, error: specialtyError }, { data: supervisor, error: supervisorError }, { data: existingProfile, error: existingError }] = await Promise.all([
+    const [{ data: roster, error: rosterError }, { data: specialty, error: specialtyError }, { data: existingProfile, error: existingError }] = await Promise.all([
       admin.from("eligible_student_roster").select("university_number,full_name,gender,specialty_id,is_active").eq("university_number", number).maybeSingle(),
       admin.from("specialties").select("id,name,is_active").eq("id", specialtyId).maybeSingle(),
-      admin.from("public_supervisors").select("id,name,region,category,specialty,supervisor_group,phone,is_active").eq("id", supervisorId).maybeSingle(),
       admin.from("student_profiles").select("user_id").eq("university_number", number).maybeSingle(),
     ]);
     if (rosterError || specialtyError || supervisorError || existingError) {
@@ -170,17 +167,8 @@ Deno.serve(async (req: Request) => {
     if (roster.gender !== gender) return reply({ error: "فئة الرقم الجامعي لا تطابق بيانات كشف القسم. راجع القسم." }, 403);
     if (roster.specialty_id != null && Number(roster.specialty_id) !== specialtyId) return reply({ error: "التخصص المختار لا يطابق التخصص المسجل في كشف القسم." }, 403);
     if (!specialty || specialty.is_active === false) return reply({ error: "التخصص المختار غير مفعّل." }, 400);
-    const administrativeSpecialties = ["إدارة الأعمال", "السكرتاريا الدولية", "العلوم المالية والمصرفية"];
-    const isAdministrativeSpecialty = administrativeSpecialties.some(name => norm(name) === norm(specialty.name || ""));
-    const supervisorGroup = String(supervisor?.supervisor_group || "").trim();
-    const isAdministrativeSupervisor = norm(supervisorGroup) === norm("العلوم الإدارية");
-    if (!supervisor || supervisor.is_active === false ||
-        (isAdministrativeSpecialty && !isAdministrativeSupervisor) ||
-        !regionMatches(area, supervisor.region) ||
-        !categoryMatches(gender, supervisor.category) ||
-        !specialtyMatches(specialty.name || "", supervisorGroup || supervisor.specialty || "")) {
-      return reply({ error: "المشرف المختار لا يطابق المنطقة أو التخصص أو فئة الطالب. اختر المشرف المعتمد للمجموعة." }, 400);
-    }
+    // The approved roster map supplies the default supervisor. New students without a roster mapping
+    // remain unassigned until the department head makes the first manual assignment.
 
     const email = emailFor(number);
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -212,7 +200,7 @@ Deno.serve(async (req: Request) => {
     const { error: profileError } = await admin.from("student_profiles").upsert({
       user_id: userId, university_number: number, full_name: roster.full_name, gender,
       specialty_id: specialtyId, phone, email, eligibility_status: "pending",
-      student_area: area, supervisor_name: supervisor.name, supervisor_phone: supervisor.phone || null,
+      student_area: area,
     }, { onConflict: "user_id" });
     if (profileError) {
       console.error("student-auth profile insert error", profileError.message);
