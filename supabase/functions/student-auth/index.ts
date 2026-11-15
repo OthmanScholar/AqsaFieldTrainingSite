@@ -170,11 +170,15 @@ Deno.serve(async (req: Request) => {
     if (roster.gender !== gender) return reply({ error: "فئة الرقم الجامعي لا تطابق بيانات كشف القسم. راجع القسم." }, 403);
     if (roster.specialty_id != null && Number(roster.specialty_id) !== specialtyId) return reply({ error: "التخصص المختار لا يطابق التخصص المسجل في كشف القسم." }, 403);
     if (!specialty || specialty.is_active === false) return reply({ error: "التخصص المختار غير مفعّل." }, 400);
+    const administrativeSpecialties = ["إدارة الأعمال", "السكرتاريا الدولية", "العلوم المالية والمصرفية"];
+    const isAdministrativeSpecialty = administrativeSpecialties.some(name => norm(name) === norm(specialty.name || ""));
+    const isAdministrativeSupervisor = Number(supervisor?.id) === 13;
     if (!supervisor || supervisor.is_active === false ||
+        (isAdministrativeSpecialty && !isAdministrativeSupervisor) ||
         !regionMatches(area, supervisor.region) ||
         !categoryMatches(gender, supervisor.category) ||
-        !specialtyMatches(specialty.name || "", (Number(supervisor.id) === 13 ? "العلوم الإدارية" : supervisor.specialty || ""))) {
-      return reply({ error: "المشرف المختار لا يطابق المنطقة أو التخصص أو فئة الطالب. اختر مشرفًا مطابقًا." }, 400);
+        !specialtyMatches(specialty.name || "", (isAdministrativeSupervisor ? "العلوم الإدارية" : supervisor.specialty || ""))) {
+      return reply({ error: "المشرف المختار لا يطابق المنطقة أو التخصص أو فئة الطالب. اختر المشرف المعتمد للمجموعة." }, 400);
     }
 
     const email = emailFor(number);
