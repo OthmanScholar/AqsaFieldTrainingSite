@@ -1,0 +1,1 @@
+revoke all on function public.set_student_evaluation_specialty() from public, anon, authenticated;
