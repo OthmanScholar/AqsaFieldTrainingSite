@@ -286,7 +286,7 @@ body.supervisor-mode .home-hub{display:none!important}
      <div class="field"><label for="phone">رقم الجوال</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" required minlength="8" maxlength="20" placeholder="05xxxxxxxx"></div>
      <div class="field"><label for="signupArea">منطقة التدريب</label><select id="signupArea" required><option value="">اختر المنطقة</option><option value="غزة والشمال">غزة والشمال</option><option value="الوسطى">الوسطى</option><option value="خانيونس">خانيونس</option><option value="رفح">رفح</option></select></div>
      <div class="field"><label for="specialty">التخصص المعتمد</label><select id="specialty" required disabled><option value="">تحقق من الرقم الجامعي أولًا</option></select></div>
-     <div class="field"><label for="signupSupervisor">المشرف</label><select id="signupSupervisor" required disabled><option value="">اختر المنطقة والتخصص أولًا</option></select><p class="field-help">ستظهر فقط الأسماء المطابقة للمنطقة والتخصص وفئة الطالب/الطالبة بعد تحميل القائمة الرسمية للمشرفين.</p></div>
+     <div class="field"><div class="notice show">يُحدد المشرف تلقائيًا من كشف القسم المعتمد عند التسجيل. إذا كان الطالب جديدًا أو يحتاج تغيير المشرف، يتولى رئيس القسم ذلك من لوحة الإدارة.</div></div>
      <div class="field"><label for="signupPassword">كلمة المرور (8 أحرف على الأقل)</label><div class="password-row"><input type="password" id="signupPassword" minlength="8" required autocomplete="new-password"><button class="btn ghost" type="button" id="toggleSignupPassword" onclick="return togglePasswordVisibility('signupPassword','toggleSignupPassword',event)">إظهار</button></div></div>
      <button class="btn gold" type="submit">إنشاء حساب الطالب</button>
     </form>
@@ -770,11 +770,9 @@ $('signupForm').addEventListener('submit',async e=>{
  const number=$('universityNumber').value.trim();
  if(!((number.startsWith('122')&&number.length>=5)||((number.startsWith('222')||number.startsWith('220'))&&number.length>=5))){showNotice('تحقق من الرقم الجامعي: 122 للطلاب و222 أو 220 للطالبات.','error');return}
  if(!verifiedStudentRoster){showNotice('تحقق من الرقم الجامعي أولًا ليجلب النظام اسمك وتخصصك من كشف القسم.','error');return}
- const supervisorId=$('signupSupervisor').value;
- if(!supervisorId){showNotice('اختر المشرف الذي يطابق المنطقة والتخصص وفئة الطالب. إذا لم يظهر مشرف مناسب، راجع القسم.','error');return}
  const submit=e.submitter; if(submit)submit.disabled=true;
  try{
-  const result=await studentAuthRequest({action:'signup',full_name:$('fullName').value.trim(),university_number:number,phone:$('phone').value.trim(),student_area:$('signupArea').value,specialty_id:Number($('specialty').value),supervisor_id:Number(supervisorId),password:$('signupPassword').value});
+  const result=await studentAuthRequest({action:'signup',full_name:$('fullName').value.trim(),university_number:number,phone:$('phone').value.trim(),student_area:$('signupArea').value,specialty_id:Number($('specialty').value),password:$('signupPassword').value});
   await acceptAuthSession(result);
   showNotice('تم إنشاء حساب الطالب وتسجيل الدخول بنجاح.','success');
  }catch(err){showNotice(err.message||'تعذر إنشاء الحساب.','error')}
