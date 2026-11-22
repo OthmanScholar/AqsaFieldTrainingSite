@@ -1070,8 +1070,7 @@ async function loadSupervisorReport(){
  if(!semesterInfo){out.innerHTML='<p class="notice show error">الفصل الدراسي المحدد غير موجود.</p>';return}
  const semesterLabel=semesterInfo.semester_name||semester;
  out.innerHTML='<p>جارٍ إعداد تقرير المشرفين...</p>';
- // يعتمد التقرير على التسجيلات المعتمدة المرتبطة بالمشرف، ثم يقسمها حسب حالة الأهلية.
- // هذا يمنع إسقاط الطلبة الذين اعتُمد تسجيلهم ولم تكتمل أهليتهم بعد.
+ // يعرض التقرير حالة اعتماد التسجيل فقط، ولا يخلطها بحالة أهلية الطالب للتدريب.
  const {data:students,error}=await sb.from('student_profiles')
   .select('user_id,assigned_supervisor_id,specialty_id,registration_status')
 
@@ -1097,7 +1096,7 @@ async function loadSupervisorReport(){
   if(!grouped.has(sid))grouped.set(sid,{students:new Set(),approved:new Set(),pending:new Set(),assignedSpecialties:new Set()});
   const g=grouped.get(sid);
   g.students.add(student.user_id);
-  if(student.eligibility_status==='approved')g.approved.add(student.user_id);
+  if(student.registration_status==='approved')g.approved.add(student.user_id);
   else g.pending.add(student.user_id);
   if(student.specialty_id&&specialtyMap.get(String(student.specialty_id)))g.assignedSpecialties.add(specialtyMap.get(String(student.specialty_id)));
  });
