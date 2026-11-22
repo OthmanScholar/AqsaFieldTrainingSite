@@ -1841,10 +1841,81 @@ async function loadSupervisorForms(){
   const rawMax=maxes.reduce((a,b)=>a+b,0);
   const targetMax=kind==='supervisor'?60:20;
   if(rawMax!==targetMax){area.innerHTML='<p class="notice show error">مجموع أوزان معايير هذا النموذج ('+rawMax+') لا يطابق الدرجة المعتمدة ('+targetMax+'). أوقفنا الحفظ حتى تُراجع الأوزان.</p>';return}
-  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الحد الأعلى يظهر بجانب كل معيار، ومجموع النموذج النهائي من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="0" data-max="'+maxes[i]+'" required style="max-width:90px"></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب"></textarea></label><div class="service-buttons"><button class="btn gold" type="button" id="sfSave">حفظ التقييم رسميًا</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
-  const form=$('sfScoringForm'),updateTotal=()=>{const inputs=[...form.querySelectorAll('.sfScore')];let total=0;for(const input of inputs){let v=Number(input.value||0),max=Number(input.dataset.max);if(v<0||v>max){input.setCustomValidity('الدرجة يجب أن تكون بين صفر و'+max);input.reportValidity();return null}else input.setCustomValidity('');total+=v} $('sfTotal').textContent=total;return {total,score:total}};
-  form.querySelectorAll('.sfScore').forEach(x=>x.addEventListener('input',updateTotal));
-  $('sfSave').onclick=async()=>{if(!form.reportValidity())return;const calc=updateTotal();if(!calc)return;const studentId=student.value;if(!studentId){showNotice('اختر الطالب أولًا.','error');return}const {data:existing,error:readError}=await sb.from('student_semester_evaluations').select('portfolio_score,supervisor_score,institution_score,signature_sheet_score,evaluation_notes,evaluation_status').eq('semester_code',semesterCode).eq('student_user_id',studentId).maybeSingle();if(readError){showNotice('تعذر قراءة تقييم هذا الفصل: '+readError.message,'error');return}const values={portfolio:existing?.portfolio_score??null,supervisor:existing?.supervisor_score??null,institution:existing?.institution_score??null};values[kind]=calc.score;const note=$('sfNotes').value.trim();const notes=[existing?.evaluation_notes,note?'['+(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'ملف الإنجاز':'المؤسسة')+'] '+note:null].filter(Boolean).join('\n');const save=$('sfSave');save.disabled=true;try{const {error}=await sb.rpc('save_student_semester_evaluation',{p_student_user_id:studentId,p_semester_code:semesterCode,p_portfolio_score:values.portfolio,p_supervisor_score:values.supervisor,p_institution_score:values.institution,p_signature_sheet_score:0,p_evaluation_notes:notes||null});if(error)throw error;showNotice('تم حفظ درجة '+calc.score+' من '+targetMax+' في سجل تقييم الفصل الدراسي.','success');await refreshSubmissionStatus()}catch(err){showNotice('لم يتم تأكيد حفظ التقييم: '+(err.message||'تحقق من صلاحيات جدول student_evaluations.'),'error')}finally{save.disabled=false}};
+  const studentIdAtRender=student.value;
+  const localKey='aqsa-eval-draft:'+semesterCode+':'+studentIdAtRender+':'+templateName+':'+kind;
+  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الحد الأعلى يظهر بجانب كل معيار، ومجموع النموذج النهائي من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="0" data-max="'+maxes[i]+'" required style="max-width:90px"></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب"></textarea></label><p id="sfSaveState" class="muted small">الحفظ التلقائي جاهز — تُحفظ التغييرات محليًا وتُزامن مع قاعدة البيانات عند توفر الإنترنت.</p><div class="service-buttons"><button class="btn gold" type="button" id="sfSave">حفظ مبدئي</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
+  const form=$('sfScoringForm'),scoreInputs=[...form.querySelectorAll('.sfScore')];
+  const updateTotal=()=>{let total=0;for(const input of scoreInputs){let v=Number(input.value||0),max=Number(input.dataset.max);if(v<0||v>max){input.setCustomValidity('الدرجة يجب أن تكون بين صفر و'+max);input.reportValidity();return null}else input.setCustomValidity('');total+=v} $('sfTotal').textContent=total;return {total,score:total}};
+  const readFormDetails=()=>({criteria:criteria.slice(),maxes:maxes.slice(),scores:scoreInputs.map(x=>x.value===''?null:Number(x.value)),notes:$('sfNotes').value,template:templateName,kind,updatedAt:Date.now()});
+  const storeLocalDraft=()=>{try{localStorage.setItem(localKey,JSON.stringify(readFormDetails()))}catch(e){}};
+  let saveTimer=null,saveBusy=false,saveAgain=false,locked=false;
+  const saveFormToServer=async(manual=false)=>{
+   if(locked)return;
+   if(saveBusy){saveAgain=true;return}
+   const calc=updateTotal();if(!calc)return;
+   const details=readFormDetails();
+   if(details.scores.some(x=>x===null)){if(manual)showNotice('أكمل إدخال درجات المعايير قبل الحفظ المبدئي.','error');return}
+   saveBusy=true;
+   const save=$('sfSave'),state=$('sfSaveState');
+   if(manual)save.disabled=true;
+   state.textContent='جارٍ حفظ الدرجات في قاعدة البيانات...';
+   try{
+    const {error}=await sb.rpc('save_student_semester_evaluation_form',{
+     p_student_user_id:studentIdAtRender,p_semester_code:semesterCode,p_kind:kind,
+     p_score:calc.score,p_form_details:details
+    });
+    if(error)throw error;
+    try{localStorage.removeItem(localKey)}catch(e){}
+    state.textContent='تم الحفظ المبدئي بنجاح — يمكنك العودة والتعديل قبل الاعتماد النهائي.';
+    if(manual)showNotice('تم حفظ درجات جميع المعايير لهذا النموذج بنجاح.','success');
+    await refreshSubmissionStatus();
+   }catch(err){
+    state.textContent='تعذر المزامنة الآن؛ النسخة المحلية محفوظة على هذا الجهاز وستبقى حتى عودة الاتصال.';
+    if(manual)showNotice('تعذر الحفظ على الخادم: '+(err.message||'خطأ غير معروف')+'. بقيت الدرجات محفوظة محليًا على هذا الجهاز.','error');
+   }finally{
+    saveBusy=false;if(manual)save.disabled=locked;
+    if(saveAgain){saveAgain=false;saveFormToServer(false)}
+   }
+  };
+  const queueAutosave=()=>{
+   if(locked)return;
+   updateTotal();storeLocalDraft();
+   $('sfSaveState').textContent='تم حفظ التغييرات على هذا الجهاز — جارٍ تجهيز المزامنة التلقائية...';
+   if(saveTimer)clearTimeout(saveTimer);
+   saveTimer=setTimeout(()=>saveFormToServer(false),1100);
+  };
+  scoreInputs.forEach(x=>x.addEventListener('input',queueAutosave));
+  $('sfNotes').addEventListener('input',queueAutosave);
+  $('sfSave').onclick=()=>saveFormToServer(true);
+  let localDraft=null;
+  try{localDraft=JSON.parse(localStorage.getItem(localKey)||'null')}catch(e){}
+  if(localDraft&&Array.isArray(localDraft.scores)){
+   scoreInputs.forEach((x,i)=>{if(i<localDraft.scores.length&&localDraft.scores[i]!==null)x.value=String(localDraft.scores[i])});
+   $('sfNotes').value=localDraft.notes||'';
+   $('sfSaveState').textContent='استُعيدت مسودة هذا النموذج من هذا الجهاز — ستتم مزامنتها مع الخادم عند توفر الإنترنت.';
+   updateTotal();
+  }
+  const {data:savedRow,error:savedReadError}=await sb.from('student_semester_evaluations')
+   .select('evaluation_details,evaluation_status')
+   .eq('semester_code',semesterCode).eq('student_user_id',studentIdAtRender).maybeSingle();
+  if(student.value===studentIdAtRender&&type.value===kind){
+   if(savedReadError){$('sfSaveState').textContent='تعذر فحص الحفظ السابق من الخادم؛ المسودة المحلية إن وجدت ما زالت محفوظة.'}
+   else{
+    const savedForm=savedRow?.evaluation_details?.[kind];
+    if(!localDraft&&savedForm&&Array.isArray(savedForm.scores)){
+     scoreInputs.forEach((x,i)=>{if(i<savedForm.scores.length&&savedForm.scores[i]!==null&&savedForm.scores[i]!==undefined)x.value=String(savedForm.scores[i])});
+     $('sfNotes').value=savedForm.notes||'';
+     $('sfSaveState').textContent='تم استرجاع الدرجات السابقة من قاعدة البيانات.';
+     updateTotal();
+    }
+    if(savedRow?.evaluation_status==='approved'){
+     locked=true;scoreInputs.forEach(x=>x.disabled=true);$('sfNotes').disabled=true;$('sfSave').disabled=true;
+     $('sfSaveState').textContent='هذا التقييم معتمد نهائيًا ومقفل. يلزم طلب فتحه من رئيس القسم قبل التعديل.';
+    }else if(localDraft){
+     if(navigator.onLine)saveFormToServer(false);
+    }
+   }
+  }
   $('sfPrint').onclick=()=>{updateTotal();if(!form.reportValidity())return;window.print()};
  }
  renderForm();
@@ -1861,15 +1932,15 @@ async function loadSupervisorForms(){
   const complete=!!e&&labels.every(x=>x[1]!==null&&x[1]!==undefined);
   const finalTotal=complete?labels.reduce((sum,x)=>sum+Number(x[1]),0):null;
   const statusLabels={draft:'مسودة — لم تُرسل',submitted:'مرسل لرئيس القسم',returned:'معاد لاستكمال التعديل',approved:'معتمد نهائيًا'};
-  submissionArea.innerHTML='<div class="card" style="background:#f8fafc"><h4>حالة التقييم النهائي</h4><p><strong>الحالة:</strong> '+esc(statusLabels[e?.evaluation_status]||'لم يبدأ التقييم')+'</p><div class="tablewrap"><table><thead><tr><th>النموذج</th><th>الدرجة</th><th>الحد الأعلى</th></tr></thead><tbody>'+labels.map(x=>'<tr><td>'+x[0]+'</td><td>'+esc(x[1]??'لم يُحفظ')+'</td><td>'+x[2]+'</td></tr>').join('')+'<tr><th>المجموع</th><th>'+(complete?esc(finalTotal)+' / 100':'غير مكتمل')+'</th><th>100</th></tr>'+'</tbody></table></div>'+(e?.review_note?'<p class="notice show">ملاحظة رئيس القسم: '+esc(e.review_note)+'</p>':'')+'<div class="service-buttons"><button class="btn" type="button" id="sfRefreshStatus">تحديث الحالة</button><button class="btn gold" type="button" id="sfSubmitEvaluation" '+(!complete||!['draft','returned'].includes(e?.evaluation_status)?'disabled':'')+'>إرسال التقييم لرئيس القسم</button></div><p class="muted small">'+(complete?'اكتملت النماذج الثلاثة. يمكنك إرسال التقييم للمراجعة.':'يجب حفظ النماذج الثلاثة قبل الإرسال.')+'</p></div>';
+  submissionArea.innerHTML='<div class="card" style="background:#f8fafc"><h4>حالة التقييم النهائي</h4><p><strong>الحالة:</strong> '+esc(statusLabels[e?.evaluation_status]||'لم يبدأ التقييم')+'</p><div class="tablewrap"><table><thead><tr><th>النموذج</th><th>الدرجة</th><th>الحد الأعلى</th></tr></thead><tbody>'+labels.map(x=>'<tr><td>'+x[0]+'</td><td>'+esc(x[1]??'لم يُحفظ')+'</td><td>'+x[2]+'</td></tr>').join('')+'<tr><th>المجموع</th><th>'+(complete?esc(finalTotal)+' / 100':'غير مكتمل')+'</th><th>100</th></tr>'+'</tbody></table></div>'+(e?.review_note?'<p class="notice show">ملاحظة رئيس القسم: '+esc(e.review_note)+'</p>':'')+'<div class="service-buttons"><button class="btn" type="button" id="sfRefreshStatus">تحديث الحالة</button><button class="btn gold" type="button" id="sfSubmitEvaluation" '+(!complete||!['draft','returned'].includes(e?.evaluation_status)?'disabled':'')+'>اعتماد نهائي</button></div><p class="muted small">'+(complete?'اكتملت النماذج الثلاثة. يمكنك إرسال التقييم للمراجعة.':'يجب حفظ النماذج الثلاثة قبل الإرسال.')+'</p></div>';
   $('sfRefreshStatus').onclick=refreshSubmissionStatus;
   $('sfSubmitEvaluation').onclick=async()=>{
    if(!complete){showNotice('أكمل النماذج الثلاثة أولًا.','error');return}
-   if(!confirm('إرسال التقييم النهائي لهذا الطالب إلى رئيس القسم للمراجعة؟'))return;
+   if(!confirm('اعتماد درجات هذا الطالب اعتمادًا نهائيًا؟ بعد الاعتماد لن يمكن تعديلها إلا بطلب فتح من رئيس القسم.'))return;
    const btn=$('sfSubmitEvaluation');btn.disabled=true;
    const {error:submitError}=await sb.rpc('submit_student_semester_evaluation',{p_student_user_id:studentId,p_semester_code:semesterCode});
    if(submitError){showNotice('تعذر إرسال التقييم: '+submitError.message,'error');btn.disabled=false;return}
-   showNotice('تم إرسال التقييم إلى رئيس القسم بنجاح.','success');
+   showNotice('تم اعتماد التقييم نهائيًا بنجاح.','success');
    await refreshSubmissionStatus();
   };
  };
