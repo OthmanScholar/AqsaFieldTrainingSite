@@ -1843,7 +1843,7 @@ async function loadSupervisorForms(){
   if(rawMax!==targetMax){area.innerHTML='<p class="notice show error">مجموع أوزان معايير هذا النموذج ('+rawMax+') لا يطابق الدرجة المعتمدة ('+targetMax+'). أوقفنا الحفظ حتى تُراجع الأوزان.</p>';return}
   const studentIdAtRender=student.value;
   const localKey='aqsa-eval-draft:'+semesterCode+':'+studentIdAtRender+':'+templateName+':'+kind;
-  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الحد الأعلى يظهر بجانب كل معيار، ومجموع النموذج النهائي من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="0" data-max="'+maxes[i]+'" required style="max-width:90px"></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب"></textarea></label><p id="sfSaveState" class="muted small">الحفظ التلقائي جاهز — تُحفظ التغييرات محليًا وتُزامن مع قاعدة البيانات عند توفر الإنترنت.</p><div class="service-buttons"><button class="btn gold" type="button" id="sfSave">حفظ مبدئي</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
+  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الحد الأعلى يظهر بجانب كل معيار، ومجموع النموذج النهائي من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="" data-max="'+maxes[i]+'" required style="max-width:90px"></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب"></textarea></label><p id="sfSaveState" class="muted small">الحفظ التلقائي جاهز — تُحفظ التغييرات محليًا وتُزامن مع قاعدة البيانات عند توفر الإنترنت.</p><div class="service-buttons"><button class="btn gold" type="button" id="sfSave">حفظ مبدئي</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
   const form=$('sfScoringForm'),scoreInputs=[...form.querySelectorAll('.sfScore')];
   const updateTotal=()=>{let total=0;for(const input of scoreInputs){let v=Number(input.value||0),max=Number(input.dataset.max);if(v<0||v>max){input.setCustomValidity('الدرجة يجب أن تكون بين صفر و'+max);input.reportValidity();return null}else input.setCustomValidity('');total+=v} $('sfTotal').textContent=total;return {total,score:total}};
   const readFormDetails=()=>({criteria:criteria.slice(),maxes:maxes.slice(),scores:scoreInputs.map(x=>x.value===''?null:Number(x.value)),notes:$('sfNotes').value,template:templateName,kind,updatedAt:Date.now()});
@@ -1897,7 +1897,7 @@ async function loadSupervisorForms(){
    updateTotal();
   }
   const {data:savedRow,error:savedReadError}=await sb.from('student_semester_evaluations')
-   .select('evaluation_details,evaluation_status')
+   .select('evaluation_details,evaluation_status,supervisor_score,portfolio_score,institution_score')
    .eq('semester_code',semesterCode).eq('student_user_id',studentIdAtRender).maybeSingle();
   if(student.value===studentIdAtRender&&type.value===kind){
    if(savedReadError){$('sfSaveState').textContent='تعذر فحص الحفظ السابق من الخادم؛ المسودة المحلية إن وجدت ما زالت محفوظة.'}
@@ -1908,6 +1908,9 @@ async function loadSupervisorForms(){
      $('sfNotes').value=savedForm.notes||'';
      $('sfSaveState').textContent='تم استرجاع الدرجات السابقة من قاعدة البيانات.';
      updateTotal();
+    }else if(!localDraft&&savedRow&&savedRow[{supervisor:'supervisor_score',portfolio:'portfolio_score',institution:'institution_score'}[kind]]!==null&&savedRow[{supervisor:'supervisor_score',portfolio:'portfolio_score',institution:'institution_score'}[kind]]!==undefined){
+     const oldTotal=savedRow[{supervisor:'supervisor_score',portfolio:'portfolio_score',institution:'institution_score'}[kind]];
+     $('sfSaveState').textContent='تنبيه: يوجد مجموع سابق محفوظ ('+oldTotal+' من '+targetMax+') لكن الدرجات التفصيلية للمعايير لم تكن محفوظة في النظام القديم. لم نغيّر المجموع السابق. أدخل درجات المعايير من النموذج الورقي/السجل ثم احفظها.';
     }
     if(savedRow?.evaluation_status==='approved'){
      locked=true;scoreInputs.forEach(x=>x.disabled=true);$('sfNotes').disabled=true;$('sfSave').disabled=true;
