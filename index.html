@@ -1073,8 +1073,8 @@ async function loadSupervisorReport(){
  // يعتمد التقرير على التسجيلات المعتمدة المرتبطة بالمشرف، ثم يقسمها حسب حالة الأهلية.
  // هذا يمنع إسقاط الطلبة الذين اعتُمد تسجيلهم ولم تكتمل أهليتهم بعد.
  const {data:students,error}=await sb.from('student_profiles')
-  .select('user_id,assigned_supervisor_id,specialty_id,eligibility_status')
-  .eq('registration_status','approved')
+  .select('user_id,assigned_supervisor_id,specialty_id,registration_status')
+
   .gte('created_at',semesterInfo.start_date)
   .lte('created_at',semesterInfo.end_date+'T23:59:59')
   .limit(5000);
