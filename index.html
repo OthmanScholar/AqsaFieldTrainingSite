@@ -1204,8 +1204,7 @@ async function loadAssignmentManager(){
    sb.from('public_supervisors').select('id,name,user_id,region,category,specialty,supervisor_group,is_active').eq('is_active',true).order('name').limit(500),
    sb.from('specialties').select('id,name').eq('is_active',true).order('name'),
    sb.from('training_entities').select('id,name').eq('is_active',true).eq('is_approved',true).order('name').limit(1000),
-   sb.from('hour_evidence_reviews').select('student_user_id,exception_reason').eq('review_status','exception_approved').limit(1000),
-   sb.from('department_head_assignment_exceptions').select('student_user_id,reason,semester_code').eq('semester_code',semester?.semester_code||'').limit(3000)
+   sb.from('hour_evidence_reviews').select('student_user_id,exception_reason').eq('review_status','exception_approved').limit(1000)
   ]);
   const err=semesterError||studentsError||assignmentsError||directoryError||specsError||entitiesError||exceptionsError;
   if(err)throw err;
