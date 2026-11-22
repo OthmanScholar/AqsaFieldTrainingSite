@@ -1805,7 +1805,7 @@ async function loadSupervisorForms(){
  const student=$('sfStudent'),specialty=$('sfSpecialty'),type=$('sfType');
  student.onchange=()=>{const opt=student.options[student.selectedIndex];if(opt?.dataset.specialty)specialty.value=opt.dataset.specialty;renderForm()};
  specialty.onchange=renderForm;type.onchange=renderForm;
- function renderForm(){
+ async function renderForm(){
   const area=$('sfFormArea'),name=specialty.value,kind=type.value,templateName=({
    'تكنولوجيا المعلومات والاتصالات':'تكنولوجيا المعلومات',
    'برمجة تطبيقات الهواتف الذكية':'تكنولوجيا المعلومات',
@@ -1887,6 +1887,7 @@ async function loadSupervisorForms(){
   scoreInputs.forEach(x=>x.addEventListener('input',queueAutosave));
   $('sfNotes').addEventListener('input',queueAutosave);
   $('sfSave').onclick=()=>saveFormToServer(true);
+  window.addEventListener('online',()=>{if(!locked)saveFormToServer(false)});
   let localDraft=null;
   try{localDraft=JSON.parse(localStorage.getItem(localKey)||'null')}catch(e){}
   if(localDraft&&Array.isArray(localDraft.scores)){
