@@ -1334,7 +1334,9 @@ async function loadSupervisorForms(){
  const student=$('sfStudent'),specialty=$('sfSpecialty'),type=$('sfType');
  student.onchange=()=>{const opt=student.options[student.selectedIndex];if(opt?.dataset.specialty)specialty.value=opt.dataset.specialty;renderForm()};
  specialty.onchange=renderForm;type.onchange=renderForm;
- function renderForm(){
+ let renderFormSequence=0;
+async function renderForm(){
+  const renderId=++renderFormSequence;
   const area=$('sfFormArea'),name=specialty.value,kind=type.value,templateName=({
    'تكنولوجيا المعلومات والاتصالات':'تكنولوجيا المعلومات',
    'برمجة تطبيقات الهواتف الذكية':'تكنولوجيا المعلومات',
@@ -1362,10 +1364,70 @@ async function loadSupervisorForms(){
   if(maxes.length!==criteria.length){area.innerHTML='<p class="notice show error">عدد معايير النموذج لا يطابق أوزانه المعتمدة؛ أوقفنا التقييم حتى لا تُحسب الدرجة بصورة خاطئة. يلزم مراجعة النموذج الأصلي لهذا التخصص.</p>';return}
   const rawMax=maxes.reduce((a,b)=>a+b,0);
   const targetMax=kind==='supervisor'?60:kind==='portfolio'?20:20;
-  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الأوزان النهائية ثابتة: تقييم المشرف 60، ملف الإنجاز 20، تقييم المؤسسة 20. لا يوجد نموذج رابع أو درجات لكشف التوقيعات. الدرجة المحسوبة لهذا النموذج من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="0" data-max="'+maxes[i]+'" required style="max-width:90px"></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب"></textarea></label><div class="service-buttons"><button class="btn gold" type="button" id="sfSave">حفظ مبدئي</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
-  const form=$('sfScoringForm'),updateTotal=()=>{const inputs=[...form.querySelectorAll('.sfScore')];let total=0;for(const input of inputs){let v=Number(input.value||0),max=Number(input.dataset.max);if(v<0||v>max){input.setCustomValidity('الدرجة يجب أن تكون بين صفر و'+max);input.reportValidity();return null}else input.setCustomValidity('');total+=v} $('sfTotal').textContent=total;return {total,score:total}};
-  form.querySelectorAll('.sfScore').forEach(x=>x.addEventListener('input',updateTotal));
-  $('sfSave').onclick=async()=>{if(!form.reportValidity())return;const calc=updateTotal();if(!calc)return;const studentId=student.value;if(!studentId){showNotice('اختر الطالب أولًا.','error');return}const {data:existing,error:readError}=await sb.from('student_semester_evaluations').select('portfolio_score,supervisor_score,institution_score,signature_sheet_score,evaluation_notes,evaluation_status').eq('semester_code',semesterCode).eq('student_user_id',studentId).maybeSingle();if(readError){showNotice('تعذر قراءة تقييم هذا الفصل: '+readError.message,'error');return}const values={portfolio:existing?.portfolio_score??null,supervisor:existing?.supervisor_score??null,institution:existing?.institution_score??null};values[kind]=calc.score;const note=$('sfNotes').value.trim();const notes=[existing?.evaluation_notes,note?'['+(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'ملف الإنجاز':'المؤسسة')+'] '+note:null].filter(Boolean).join('\n');const save=$('sfSave');save.disabled=true;try{const {error}=await sb.rpc('save_student_semester_evaluation',{p_student_user_id:studentId,p_semester_code:semesterCode,p_portfolio_score:values.portfolio,p_supervisor_score:values.supervisor,p_institution_score:values.institution,p_signature_sheet_score:0,p_evaluation_notes:notes||null});if(error)throw error;showNotice('تم الحفظ المبدئي لدرجة '+calc.score+' من '+targetMax+'. يمكنك تعديلها قبل الاعتماد النهائي.','success');await refreshSubmissionStatus();catch(err){showNotice('لم يتم تأكيد حفظ التقييم: '+(err.message||'تحقق من صلاحيات جدول student_evaluations.'),'error')}finally{save.disabled=false}};
+  const studentId=student.value;
+  const {data:existing,error:loadError}=await sb.from('student_semester_evaluations')
+    .select('portfolio_score,supervisor_score,institution_score,evaluation_status,evaluation_details')
+    .eq('semester_code',semesterCode).eq('student_user_id',studentId).maybeSingle();
+  if(renderId!==renderFormSequence)return;
+  const {data:{session}}=await sb.auth.getSession();
+  const draftKey='aqsa-field-eval:'+String(session?.user?.id||'supervisor')+':'+semesterCode+':'+studentId+':'+kind;
+  let localDraft=null;
+  try{localDraft=JSON.parse(localStorage.getItem(draftKey)||'null')}catch(_){}
+  const serverDraft=existing?.evaluation_details?.[kind]||null;
+  const serverTime=serverDraft?.saved_at?Date.parse(serverDraft.saved_at):0;
+  const localTime=Number(localDraft?.savedAt||0);
+  const useLocal=!!(localDraft&&Array.isArray(localDraft.scores)&&localTime>serverTime);
+  const restoredScores=useLocal?localDraft.scores:(Array.isArray(serverDraft?.scores)?serverDraft.scores:[]);
+  const restoredNotes=useLocal?(localDraft.notes||''):(serverDraft?.notes||'');
+  const legacyScore=existing?.[kind==='supervisor'?'supervisor_score':kind==='portfolio'?'portfolio_score':'institution_score'];
+  const legacyMessage=(!restoredScores.length&&legacyScore!==null&&legacyScore!==undefined)
+    ?'<p class="notice show">يوجد مجموع سابق محفوظ ('+esc(legacyScore)+' من '+targetMax+'). النسخة السابقة لم تحفظ درجات المعايير منفصلة؛ أدخل المعايير مرة واحدة، وسيتم حفظ كل درجة تلقائياً بعد ذلك.</p>':'';
+  const locked=['approved','reopen_requested'].includes(existing?.evaluation_status);
+  area.innerHTML='<h4>'+esc(kind==='supervisor'?'تقييم المشرف':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة')+'</h4><p class="muted small">أدخل درجات معايير هذا النموذج. الأوزان النهائية ثابتة: تقييم المشرف 60، ملف الإنجاز 20، تقييم المؤسسة 20. لا يوجد نموذج رابع أو درجات لكشف التوقيعات. الدرجة المحسوبة لهذا النموذج من أصل: '+targetMax+' درجة.</p><form id="sfScoringForm"><div class="tablewrap"><table><thead><tr><th>#</th><th>المعيار</th><th>الدرجة</th></tr></thead><tbody>'+criteria.map((label,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(label)+' <span class="muted">/ '+maxes[i]+'</span></td><td><input type="number" class="sfScore" min="0" max="'+maxes[i]+'" step="0.5" value="'+Number(restoredScores[i]??0)+'" data-max="'+maxes[i]+'" required style="max-width:90px" '+(locked?'disabled':'')+'></td></tr>').join('')+'</tbody></table></div><p><strong>المجموع: <span id="sfTotal">0</span> / '+rawMax+'</strong></p><label>ملاحظات المقيم<textarea id="sfNotes" rows="3" placeholder="ملاحظات مرتبطة بأداء الطالب" '+(locked?'disabled':'')+'>'+esc(restoredNotes)+'</textarea></label><p id="sfAutosaveStatus" class="muted small">الحفظ التلقائي مفعّل: تُحفظ الدرجات على هذا الجهاز فور إدخالها ثم تُزامن مع النظام.</p>'+legacyMessage+'<div class="service-buttons"><button class="btn gold" type="button" id="sfSave" '+(locked?'disabled':'')+'>حفظ الآن</button><button class="btn" type="button" id="sfPrint">طباعة النموذج</button></div></form>';
+  const form=$('sfScoringForm');
+  const updateTotal=()=>{const inputs=[...form.querySelectorAll('.sfScore')];let total=0;for(const input of inputs){let v=Number(input.value||0),max=Number(input.dataset.max);if(v<0||v>max){input.setCustomValidity('الدرجة يجب أن تكون بين صفر و'+max);input.reportValidity();return null}else input.setCustomValidity('');total+=v}$('sfTotal').textContent=Number(total.toFixed(2));return {total:Number(total.toFixed(2)),score:Number(total.toFixed(2))}};
+  const status=$('sfAutosaveStatus');
+  let autosaveTimer=null,saveInFlight=false,queuedSnapshot=null;
+  const collectSnapshot=()=>({scores:[...form.querySelectorAll('.sfScore')].map(x=>Number(x.value||0)),notes:$('sfNotes').value||'',savedAt:Date.now(),pending:true});
+  const persistLocal=snapshot=>{try{localStorage.setItem(draftKey,JSON.stringify(snapshot));return true}catch(_){status.textContent='تعذر الحفظ المحلي في هذا المتصفح؛ لا تغلق الصفحة قبل نجاح الحفظ في النظام.';return false}};
+  const syncQueued=async()=>{
+    if(saveInFlight||!queuedSnapshot||locked)return;
+    const snapshot=queuedSnapshot;queuedSnapshot=null;saveInFlight=true;
+    try{
+      const total=Number(snapshot.scores.reduce((a,b)=>a+Number(b||0),0).toFixed(2));
+      const {error}=await sb.rpc('save_student_semester_evaluation_progress',{
+        p_student_user_id:studentId,p_semester_code:semesterCode,p_assessment_type:kind,
+        p_model_score:total,p_criteria_scores:snapshot.scores,p_notes:snapshot.notes||null
+      });
+      if(error)throw error;
+      try{const latest=JSON.parse(localStorage.getItem(draftKey)||'null');if(latest&&latest.savedAt===snapshot.savedAt){latest.pending=false;latest.syncedAt=Date.now();localStorage.setItem(draftKey,JSON.stringify(latest))}}catch(_){}
+      status.textContent='تم الحفظ في النظام بنجاح — آخر حفظ '+new Date().toLocaleTimeString('ar');
+      await refreshSubmissionStatus();
+    }catch(err){
+      queuedSnapshot=queuedSnapshot&&queuedSnapshot.savedAt>snapshot.savedAt?queuedSnapshot:snapshot;
+      status.textContent='محفوظ على هذا الجهاز، وتعذرت المزامنة الآن. سيُرسل تلقائياً عند عودة الإنترنت. ('+(err.message||'انقطاع اتصال')+')';
+    }finally{
+      saveInFlight=false;
+      if(queuedSnapshot&&navigator.onLine)setTimeout(syncQueued,500);
+    }
+  };
+  const captureAndSchedule=(immediate=false)=>{
+    const calc=updateTotal();if(!calc)return;
+    const snapshot=collectSnapshot();
+    if(!persistLocal(snapshot))return;
+    queuedSnapshot=snapshot;
+    status.textContent='تم الحفظ على هذا الجهاز — جارٍ حفظ نسخة النظام...';
+    if(autosaveTimer)clearTimeout(autosaveTimer);
+    if(immediate)syncQueued();else autosaveTimer=setTimeout(syncQueued,700);
+  };
+  form.querySelectorAll('.sfScore').forEach(x=>x.addEventListener('input',()=>captureAndSchedule()));
+  $('sfNotes').addEventListener('input',()=>captureAndSchedule());
+  form.querySelectorAll('.sfScore').forEach(x=>x.addEventListener('change',()=>captureAndSchedule(true)));
+  $('sfNotes').addEventListener('change',()=>captureAndSchedule(true));
+  $('sfSave').onclick=()=>{if(!form.reportValidity())return;captureAndSchedule(true)};
+  window.ononline=()=>{if(queuedSnapshot)syncQueued()};
+  if(useLocal&&localDraft.pending){queuedSnapshot=localDraft;if(navigator.onLine)setTimeout(syncQueued,700)}
+  updateTotal();
   $('sfPrint').onclick=()=>{updateTotal();if(!form.reportValidity())return;window.print()};
  }
  renderForm();
