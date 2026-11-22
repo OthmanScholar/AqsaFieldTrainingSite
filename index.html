@@ -1786,7 +1786,7 @@ async function loadSupervisorForms(){
  const {data:activeSemester,error:semesterError}=await sb.from('academic_semesters').select('semester_code,semester_name').eq('is_active',true).maybeSingle();
  if(semesterError||!activeSemester){r.innerHTML='<p class="notice show error">لا يوجد فصل دراسي نشط أو تعذر تحميله. راجع إعداد الفصل لدى رئيس القسم.</p>';return}
  const semesterCode=activeSemester.semester_code;
- const assigned=await sb.from('supervisor_assignments').select('student_user_id,specialty_id').eq('supervisor_user_id',currentSession.user.id).eq('semester_code',semesterCode).limit(500);
+ const assigned=await sb.from('supervisor_assignments').select('student_user_id,specialty_id,training_entity_id').eq('supervisor_user_id',currentSession.user.id).eq('semester_code',semesterCode).limit(500);
  if(currentRole==='supervisor'&&assigned.error){r.innerHTML='<p class="notice show error">تعذر تحميل طلاب المشرف: '+esc(assigned.error.message)+'</p>';return}
  const ids=[...new Set((assigned.data||[]).map(x=>x.student_user_id).filter(Boolean))];
  const [profilesResult,specialtiesResult]=await Promise.all([
@@ -1920,7 +1920,23 @@ async function loadSupervisorForms(){
     }
    }
   }
-  $('sfPrint').onclick=()=>{updateTotal();if(!form.reportValidity())return;window.print()};
+  $('sfPrint').onclick=async()=>{
+   const popup=window.open('','_blank');
+   if(!popup){showNotice('اسمح بفتح النوافذ المنبثقة لطباعة النموذج.','error');return}
+   const opt=student.options[student.selectedIndex],studentProfile=profiles.find(p=>p.user_id===studentIdAtRender)||{};
+   const assignment=(assigned.data||[]).find(a=>a.student_user_id===studentIdAtRender)||{};
+   const entityResult=assignment.training_entity_id?await sb.from('training_entities').select('name').eq('id',assignment.training_entity_id).maybeSingle():{data:null,error:null};
+   const entityName=entityResult.data?.name||'—';
+   const scoreRows=criteria.map((label,i)=>({label,max:maxes[i],score:scoreInputs[i].value===''?'—':scoreInputs[i].value}));
+   const total=scoreRows.reduce((sum,x)=>sum+(x.score==='—'?0:Number(x.score)),0);
+   const formTitle=kind==='supervisor'?'تقييم المشرف للطالب':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة / مدير المؤسسة';
+   const studentName=studentProfile.full_name||opt?.textContent?.split(' — ')[0]||'—';
+   const studentNumber=studentProfile.university_number||'—';
+   const supervisorName=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.name||currentSession.user.email||'—';
+   const rows=scoreRows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.label)+'</td><td>'+esc(x.score)+'</td><td>'+esc(x.max)+'</td></tr>').join('');
+   const doc='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(formTitle)+'</title><style>body{font-family:Tahoma,Arial,sans-serif;color:#142b45;margin:28px;line-height:1.7}h1,h2{text-align:center;color:#205b91}h1{font-size:22px;margin-bottom:4px}h2{font-size:18px;margin-top:0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;border:1px solid #ccd7e3;padding:14px;margin:20px 0}.meta div{padding:3px}.meta b{color:#205b91}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border:1px solid #b9c8d8;padding:9px;text-align:right}th{background:#f4e9ed;color:#205b91}.total{font-size:18px;font-weight:bold;text-align:left;margin-top:18px}.notes{border:1px solid #ccd7e3;min-height:60px;padding:10px;margin-top:16px}.sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:55px;text-align:center}.sign div{border-top:1px solid #333;padding-top:8px}.foot{text-align:center;color:#667;margin-top:35px;font-size:12px}@media print{body{margin:12mm}button{display:none}}</style></head><body><h1>كلية مجتمع الأقصى</h1><h2>نموذج '+esc(formTitle)+'</h2><div class="meta"><div><b>اسم الطالب:</b> '+esc(studentName)+'</div><div><b>الرقم الجامعي:</b> '+esc(studentNumber)+'</div><div><b>التخصص:</b> '+esc(specialty.value||'—')+'</div><div><b>جهة التدريب:</b> '+esc(entityName)+'</div><div><b>اسم المشرف:</b> '+esc(supervisorName)+'</div><div><b>الفصل الدراسي:</b> '+esc(activeSemester.semester_name||semesterCode)+'</div></div><table><thead><tr><th style="width:7%">#</th><th>معيار التقييم</th><th style="width:18%">الدرجة</th><th style="width:18%">الحد الأعلى</th></tr></thead><tbody>'+rows+'</tbody></table><p class="total">المجموع: '+total+' / '+rawMax+' (الوزن المعتمد للنموذج: '+targetMax+' درجة)</p><div class="notes"><b>ملاحظات المقيم:</b><br>'+esc($('sfNotes').value||'لا توجد ملاحظات').replace(/\n/g,'<br>')+'</div><div class="sign"><div>توقيع المشرف</div><div>توقيع رئيس القسم / الجهة المختصة</div></div><p class="foot">نظام إدارة التدريب الميداني — كلية مجتمع الأقصى</p><script>window.onload=()=>{window.focus();window.print()}<\/script></body></html>';
+   popup.document.open();popup.document.write(doc);popup.document.close();
+  };
  }
  renderForm();
  const submissionArea=$('sfSubmissionArea');
