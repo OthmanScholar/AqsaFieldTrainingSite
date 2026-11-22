@@ -1932,7 +1932,11 @@ async function loadSupervisorForms(){
    const formTitle=kind==='supervisor'?'تقييم المشرف للطالب':kind==='portfolio'?'تقييم ملف الإنجاز':'تقييم المؤسسة / مدير المؤسسة';
    const studentName=studentProfile.full_name||opt?.textContent?.split(' — ')[0]||'—';
    const studentNumber=studentProfile.university_number||'—';
-   const supervisorName=currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.name||currentSession.user.email||'—';
+   const [{data:supervisorDirectory},{data:supervisorProfile}]=await Promise.all([
+    sb.from('public_supervisors').select('name').eq('user_id',currentSession.user.id).maybeSingle(),
+    sb.from('supervisor_profiles').select('full_name').eq('user_id',currentSession.user.id).maybeSingle()
+   ]);
+   const supervisorName=supervisorDirectory?.name||supervisorProfile?.full_name||currentSession.user.user_metadata?.full_name||currentSession.user.user_metadata?.name||'اسم المشرف غير متوفر';
    const rows=scoreRows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.label)+'</td><td>'+esc(x.score)+'</td><td>'+esc(x.max)+'</td></tr>').join('');
    const doc=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(formTitle)}</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>
 :root{--green:#075b3d;--green2:#0b7650;--gold:#d5a62e;--ink:#1f2937;--muted:#64748b;--line:#d9e4dd}
